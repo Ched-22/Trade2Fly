@@ -1,0 +1,117 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  password    String
+  displayName String
+  initials    String
+  /// false = inativo (aguardando confirmação manual); true = pode entrar
+  active      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  listings      Listing[]
+  favorites     Favorite[]
+  messages      Message[]
+  buyerThreads  ChatThread[]       @relation("BuyerThreads")
+  sellerThreads ChatThread[]       @relation("SellerThreads")
+  orders        Order[]
+  resetTokens   PasswordResetToken[]
+}
+
+model Listing {
+  id          Int      @id @default(autoincrement())
+  title       String
+  priceNum    Float
+  specs       String   @default("")
+  size        String?
+  jumps       String?
+  year        String?
+  weight      String?
+  brand       String?
+  category    String
+  condition   String
+  location    String
+  escrow      Boolean  @default(false)
+  description String?
+  active      Boolean  @default(true)
+  sellerId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  seller    User         @relation(fields: [sellerId], references: [id])
+  favorites Favorite[]
+  threads   ChatThread[]
+  orders    Order[]
+}
+
+model Favorite {
+  id        Int      @id @default(autoincrement())
+  userId    String
+  listingId Int
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id])
+  listing Listing @relation(fields: [listingId], references: [id])
+
+  @@unique([userId, listingId])
+}
+
+model ChatThread {
+  id        Int      @id @default(autoincrement())
+  buyerId   String
+  sellerId  String
+  listingId Int
+  createdAt DateTime @default(now())
+
+  buyer    User      @relation("BuyerThreads", fields: [buyerId], references: [id])
+  seller   User      @relation("SellerThreads", fields: [sellerId], references: [id])
+  listing  Listing   @relation(fields: [listingId], references: [id])
+  messages Message[]
+
+  @@unique([buyerId, listingId])
+}
+
+model Message {
+  id        Int        @id @default(autoincrement())
+  threadId  Int
+  senderId  String
+  text      String
+  createdAt DateTime   @default(now())
+
+  thread ChatThread @relation(fields: [threadId], references: [id])
+  sender User       @relation(fields: [senderId], references: [id])
+}
+
+model Order {
+  id          Int      @id @default(autoincrement())
+  buyerId     String
+  listingId   Int
+  amount      Float
+  paymentType String
+  status      String   @default("pending")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  buyer   User    @relation(fields: [buyerId], references: [id])
+  listing Listing @relation(fields: [listingId], references: [id])
+}
+
+model PasswordResetToken {
+  id        Int      @id @default(autoincrement())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}

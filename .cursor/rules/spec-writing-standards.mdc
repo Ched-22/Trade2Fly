@@ -1,0 +1,177 @@
+---
+description: Standards for writing unit specs for services, utils, transformers, guards, pipes, interceptors
+globs: "**/*.spec.ts"
+alwaysApply: false
+---
+
+# Spec Writing Standards
+
+Unit specs for NestJS services, utils, guards, pipes, and interceptors.
+
+## Decision: Create Spec or Skip
+
+**Skip** (respond "It doesn't make sense to create specs for this file") when the file is:
+
+- Re-exports only (`index.ts`, barrel files)
+- Type definitions only (interfaces, types, no runtime logic)
+- Nest modules (only `@Module` wiring, no logic)
+- Plain DTOs (fields + `@ApiProperty`, no validation/transformation logic)
+- Pure pass-through (single `return x` or `return this.repo.method()` with no branching)
+- Class-transformer `@Transform` on entity fields (test via integration/e2e instead)
+
+**Create** when the file has:
+
+- Logic, branching, or conditionals
+- Error handling (throws, returns error states)
+- Transformations (input → output with rules)
+- Side effects worth asserting (e.g. mock calls)
+- Injectable classes (services, guards, pipes, interceptors) with non-trivial behavior
+
+## Completeness: When to Stop
+
+Specs are done when:
+
+- **Happy path** covered for each method/function that has logic
+- **Edge cases** covered – null, undefined, empty, whitespace-only, invalid types, boundaries, error paths
+- Trivial pass-throughs are **not** tested
+- No over-testing of obvious branches (e.g. `if (x) return x`)
+
+**Edge cases are mandatory.** Specs with only happy-path tests are incomplete. Do not stop until both are covered.
+
+---
+
+## Framework
+
+- **Jest + ts-jest** (see `package.json`)
+- Use `test/setup.ts` for env (dotenv loads `.env` or `env-example-relational`)
+- Add `import 'reflect-metadata'` at top when testing classes with decorators
+
+## Structure
+
+- **Spec file location**: Co-locate with source (e.g. `foo.service.spec.ts` next to `foo.service.ts`)
+- **Classes** (services, injectable helpers): `describe('ClassName')` with nested `describe('methodName')`
+- **Pure functions** (utils, transformers): `describe('functionName')` with scenario-based `it` blocks
+- **Guards / Pipes / Interceptors**: `describe('ComponentName')` with scenario-based `it` blocks
+- Use **AAA pattern**: Arrange, Act, Assert with blank lines between sections
+- Name tests with `it('should ...')` – describe expected behavior, not implementation
+
+## Mocking
+
+### Services
+
+Use `Test.createTestingModule()` from `@nestjs/testing`:
+
+```typescript
+const mockRepo = {
+  findById: jest.fn(),
+  create: jest.fn(),
+};
+
+const module = await Test.createTestingModule({
+  providers: [
+    MyService,
+    { provide: MyRepository, useValue: mockRepo },
+  ],
+}).compile();
+const service = module.get(MyService);
+```
+
+Override dependencies with `{ provide: X, useValue: mockX }`; prefer `jest.fn()` for mock methods.
+
+### Guards / Interceptors
+
+Use TestingModule; mock `ExecutionContext`:
+
+```typescript
+const mockContext = {
+  switchToHttp: () => ({
+    getRequest: () => ({ user: { role: { id: 1 } } }),
+  }),
+  getHandler: () => ({}),
+  getClass: () => ({}),
+} as ExecutionContext;
+```
+
+For guards using Reflector, mock `Reflector.getAllAndOverride` for decorator behavior.
+
+### Utils / Helpers
+
+No TestingModule. Instantiate directly or test pure functions. For classes (e.g. `PaginationHelper`), mock the repository argument passed to methods.
+
+## Edge Cases & Error Coverage
+
+**Required.** Every spec must cover edge cases, not just happy path.
+
+### Transformers (e.g. `lowerCaseTransformer`, `@Transform` helpers)
+
+- `null` → expected output (often `undefined`)
+- `undefined` → expected output
+- Empty string `''` → expected output
+- Whitespace-only `'   \t\n  '` → expected output (often `''` after trim)
+- Combined behaviors (e.g. trim + lowercase in one input)
+
+### Utils / Pure Functions
+
+- `null`, `undefined` inputs
+- Empty arrays, empty strings
+- Boundary values (min, max, zero)
+- Invalid types if the function can receive them
+- Options override defaults when the function accepts both options and defaults
+
+### Services / Injectable Classes
+
+- Not found (404)
+- Validation errors (422)
+- Unauthorized / forbidden (403)
+- Duplicate / conflict
+- At least one error case per method that can fail
+
+Do not over-test trivial branches. Do not skip edge cases.
+
+## Exclusions
+
+Do not test trivial getters or pass-through methods. Focus on logic, branching, and side effects.
+
+---
+
+## Type-Specific Guidance
+
+### Services
+
+- Mock repositories with `{ findById: jest.fn(), create: jest.fn(), ... }`
+- Test `create`/`update` with valid DTO, missing relations (422), and success
+- Test `findById` with found, not found (404), and authorization (e.g. IDOR) when applicable
+
+### Utils / Helpers
+
+- Pure functions: no mocks; test inputs and outputs
+- Classes (e.g. `PaginationHelper`): instantiate and mock repository argument
+- **Class-transformer transformers**: use a minimal params helper (e.g. `({ value } as TransformFnParams)`); test null, undefined, empty string, whitespace-only, and combined behaviors – not just happy path
+
+### Guards
+
+- Mock `Reflector.getAllAndOverride` for decorator behavior (e.g. `@Public()`, `@Roles()`)
+- Mock `context.switchToHttp().getRequest()` for `request.user`
+- Test: allowed when decorator says so; allowed when no roles; denied when wrong role; denied when no user
+
+### Pipes
+
+- Custom pipes: test `transform()` with valid/invalid input
+- Built-in pipes (ParseIntPipe, etc.): usually covered by e2e; unit test only if wrapped or customized
+
+### Interceptors
+
+- Mock `next.handle()` to return `of(value)` or `throwError()` from `rxjs`
+- For interceptors that transform async data (e.g. `ResolvePromisesInterceptor`): use `of(Promise.resolve(...))` and similar shapes
+- Test that the interceptor transforms/forwards the stream correctly
+- For logging interceptors: verify no throw; optionally assert mock calls
+
+### Config / Options Objects
+
+- Config with `exceptionFactory` (e.g. validation options): call the factory directly with mock errors; assert the returned exception shape
+
+---
+
+## After Creating or Changing Specs
+
+Run `npm run lint:fix` to apply automatic lint corrections.

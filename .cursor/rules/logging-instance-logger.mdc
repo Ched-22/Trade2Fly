@@ -1,0 +1,43 @@
+---
+description: Use instance logger (this.logger) in NestJS injectable classes; never static Logger
+globs: "**/*.ts"
+alwaysApply: false
+---
+
+# Logging in NestJS
+
+When generating or editing NestJS code that needs logging, **always use an instance logger** (`this.logger`) in injectable classes (services, controllers, etc.). Do **not** use the static `Logger` from `@nestjs/common` for log calls in class methods.
+
+## Rule
+
+- **Injectable classes** (`@Injectable()`, `@Controller()`, etc.): Use `this.logger` (instance). Add `private readonly logger = new Logger(ClassName.name);` at the top of the class body if missing, and call `this.logger.log(...)`, `this.logger.error(...)`, `this.logger.warn(...)`, `this.logger.debug(...)`.
+- **Static-only utility classes** (no injectable/controller): Either keep static `Logger` for that file or note that an injectable wrapper would be needed for instance logging.
+- **Bootstrap** (e.g. `main.ts`): Static `Logger` is acceptable.
+
+## Examples
+
+```typescript
+// ❌ BAD – static Logger in a service
+@Injectable()
+export class UserService {
+  async findOne(id: string) {
+    Logger.log(`Finding user ${id}`);
+    return this.repo.findOne({ where: { id } });
+  }
+}
+
+// ✅ GOOD – instance logger
+@Injectable()
+export class UserService {
+  private readonly logger = new Logger(UserService.name);
+
+  async findOne(id: string) {
+    this.logger.log(`Finding user ${id}`);
+    return this.repo.findOne({ where: { id } });
+  }
+}
+```
+
+- Import `Logger` from `@nestjs/common` when you add the instance property.
+- Use the **actual class name** in `new Logger(ClassName.name)` (e.g. `UserService.name`, `AuthController.name`).
+- When adding logging to an existing injectable class, check if it already has `this.logger`; if so, use it and do not add a second property.

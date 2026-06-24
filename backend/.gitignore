@@ -1,0 +1,10 @@
+node_modules
+dist
+.env
+*.js.map
+.cursor
+prd
+prd-template.md
+prd-env-vars-checkup-later.md
+prd-template.md
+PR_DESCRIPTIONS.md

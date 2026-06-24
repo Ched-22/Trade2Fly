@@ -1,0 +1,20 @@
+---
+description: Avoid Prettier/ESLint pre-commit failures
+globs: "{src,apps,libs,test}/**/*.ts"
+alwaysApply: false
+---
+
+# Pre-commit Lint & Format
+
+This project uses Husky with `lint-staged` to run ESLint only on staged files before each commit. ESLint enforces Prettier rules, so formatting must be correct or the commit will fail.
+
+## Before Committing
+
+1. **Auto-fix when unsure**: Run `npm run lint -- --fix` to fix Prettier/ESLint issues automatically.
+2. **Or format explicitly**: Run `npm run format` to format `src` and `test` with Prettier.
+
+## When Editing TypeScript
+
+- **Break long lines**: Prettier enforces line length. Use newlines for long type annotations, function params, or conditionals instead of squeezing them on one line.
+- **Example** (bad → good): Replace a long inline type like `letters: Array<{ to?: Array<{ address?: string }>; text?: string }>` with multiline formatting or run `lint --fix` after editing.
+- Run `npm run lint -- --fix` after making changes if you're uncertain about formatting.
