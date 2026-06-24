@@ -2,8 +2,9 @@ node_modules
 dist
 .env
 *.js.map
-.cursor
+/.cursor
 prd
 prd-template.md
 prd-env-vars-checkup-later.md
 prd-template.md
+PR_DESCRIPTIONS.md
