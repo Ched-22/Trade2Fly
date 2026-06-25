@@ -15,6 +15,10 @@ export type Listing = {
   escrow: boolean;
   seller: string;
   grad: string;
+  description?: string;
+  imageUrls?: string[];
+  coverPhotoUrl?: string;
+  createdAt?: string;
 };
 
 export type Filters = {

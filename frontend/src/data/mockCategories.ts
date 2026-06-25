@@ -127,8 +127,8 @@ export const footerColumns: FooterColumn[] = [
   {
     title: 'Suporte',
     links: [
-      { label: 'FAQ' },
-      { label: 'Contato' },
+      { label: 'FAQ', href: '/faq' },
+      { label: 'Contato', href: `mailto:suporte@trade2fly.com.br` },
       { label: 'Taxas' },
       { label: 'Termos de Uso' },
     ],

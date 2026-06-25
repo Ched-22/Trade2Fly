@@ -1,5 +1,4 @@
 import { Send } from 'lucide-react';
-import { chatThreads } from '../data/mockChat';
 import { useMarketplace } from '../hooks/useMarketplace';
 
 export function MessagesPage() {
@@ -10,6 +9,7 @@ export function MessagesPage() {
     chatDraft,
     setChatDraft,
     appendMessage,
+    chatThreads,
   } = useMarketplace();
 
   const activeThread = chatThreads[chatIdx];

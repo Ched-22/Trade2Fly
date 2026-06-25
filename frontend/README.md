@@ -57,7 +57,8 @@ cp .env.example .env.local
 | `/meus-anuncios` | My listings | Protected |
 | `/pedidos` | Orders | Protected |
 | `/configuracoes` | Settings | Protected |
-| `/ajuda` | Help | Protected |
+| `/faq` | FAQ (perguntas frequentes) | Public |
+| `/ajuda` | Redirect → `/faq` | Public |
 | `/ferramentas` | Tools index | Public |
 | `/ferramentas/guia-harness` | Harness sizing guide | Public |
 | `/ferramentas/wingloading` | Wing loading calculator | Public |
@@ -112,6 +113,29 @@ Public calculators and guides under `/ferramentas` (config: `src/data/skydiverTo
 | Calculadora de valor | `/ferramentas/calculadora-valor` |
 
 Home “Ferramentas para skydivers” cards and footer Recursos links navigate to these routes. All tool pages show an educational disclaimer (`ToolDisclaimer`).
+
+## Sell listing (`/vender`)
+
+Full create-listing form (`pages/CreateListingPage.tsx`, components in `components/sell/`):
+
+| Section | Fields |
+|---------|--------|
+| Fotos | 1–8 images (client preview; not sent to API in v1) |
+| Básico | `title`, `brand` (+ “Outra”) |
+| Categoria | All categories from `mockCategories.ts` |
+| Detalhes | Category-specific specs (`data/listingFieldConfig.ts`) |
+| Estado e preço | `condition` (Novo / Bom / Usado), `priceNum` |
+| Localização | `location` (custódia sempre ativa — regra do site) |
+| Descrição | min 50 chars |
+
+Draft auto-save: `trade2fly:listingDraft:v1` via `lib/listingDraftStorage.ts`. Publish calls `POST /api/listings` and refetches marketplace listings.
+
+## Listing visibility
+
+- **Home / busca:** `GET /api/listings` via `MarketplaceContext` — no `mockListings` fallback on home.
+- **Meus anúncios:** `GET /api/listings/me/listings`.
+- **Detalhe:** `GET /api/listings/:id` (with context cache).
+- **Publish errors:** `listingsError` banner on home when API fails.
 
 ## Profile settings (`/perfil`)
 

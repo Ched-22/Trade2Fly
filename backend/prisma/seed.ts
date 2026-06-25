@@ -66,6 +66,7 @@ async function main() {
     { title: 'Rig BASE completo', priceNum: 11500, specs: '260 sqft · 90 saltos · 2020', size: '260', jumps: '90', year: '2020', weight: '4100', brand: 'JYRO', category: 'BASE', condition: 'Usado', location: 'Belo Horizonte, MG', escrow: true, sellerId: marina.id },
     { title: 'Velame PD Spectre 190', priceNum: 5900, specs: '190 sqft · 450 saltos · 2020', size: '190', jumps: '450', year: '2020', weight: '2050', brand: 'PD', category: 'Velames', condition: 'Usado', location: 'Campinas, SP', escrow: true, sellerId: carlos.id },
     { title: 'Capacete Cookie Fuel Open Face', priceNum: 1150, specs: 'Tam. M · 2023', size: 'M', jumps: '—', year: '2023', weight: '600', brand: 'Cookie', category: 'Capacetes e Equipamentos', condition: 'Novo', location: 'Porto Alegre, RS', escrow: true, sellerId: diego.id },
+    { title: 'Velame PD Storm 168', priceNum: 6800, specs: '168 sqft · 120 saltos · 2023', size: '168', jumps: '120', year: '2023', weight: '1980', brand: 'PD', category: 'Velames', condition: 'Bom', location: 'São Paulo, SP', escrow: true, sellerId: ana.id },
   ];
 
   for (const listing of seedListings) {

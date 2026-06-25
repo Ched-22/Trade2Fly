@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { AuthAlert } from '../components/auth/AuthAlert';
 import { HomeListingSection } from '../components/home/HomeListingSection';
 import { ToolCard } from '../components/tools/ToolCard';
 import { CategoryCard } from '../components/ui/CategoryCard';
@@ -14,34 +15,38 @@ import {
   reviews,
 } from '../data/mockCategories';
 import { homeListingSections } from '../data/homeListingSections';
-import { listings as mockListings } from '../data/mockListings';
 import { useMarketplace } from '../hooks/useMarketplace';
 
 export function HomePage() {
   const navigate = useNavigate();
-  const { favorites, toggleFavorite, allListings } = useMarketplace();
+  const {
+    favorites,
+    toggleFavorite,
+    allListings,
+    listingsLoading,
+    listingsError,
+    dismissListingsError,
+  } = useMarketplace();
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState('');
   const [subscribed, setSubscribed] = useState(false);
 
-  const sourceListings = allListings.length > 0 ? allListings : mockListings;
-
   const listingsWithFavorites = useMemo(
     () =>
-      sourceListings.map((listing) => ({
+      allListings.map((listing) => ({
         ...listing,
         fav: !!favorites[listing.id],
       })),
-    [sourceListings, favorites],
+    [allListings, favorites],
   );
 
   const categoryListingCounts = useMemo(() => {
     const counts = new Map<string, number>();
-    for (const listing of sourceListings) {
+    for (const listing of allListings) {
       counts.set(listing.category, (counts.get(listing.category) ?? 0) + 1);
     }
     return counts;
-  }, [sourceListings]);
+  }, [allListings]);
 
   const subscribe = () => {
     if (!email) {
@@ -58,8 +63,15 @@ export function HomePage() {
 
   return (
     <div>
-      <section className="relative overflow-hidden sky-gradient text-white">
-        <div className="absolute inset-0 bg-[radial-gradient(900px_400px_at_80%_-10%,rgba(255,255,255,0.16),transparent)]" />
+      <section className="relative min-h-[420px] overflow-hidden text-white sm:min-h-[480px]">
+        <img
+          src="/images/parachute-hero.png"
+          alt=""
+          aria-hidden
+          className="absolute inset-0 h-full w-full object-cover object-[center_35%]"
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-solo/92 via-solo/75 to-solo/35" />
+        <div className="absolute inset-0 bg-[radial-gradient(900px_400px_at_80%_-10%,rgba(255,255,255,0.12),transparent)]" />
         <div className="relative mx-auto flex max-w-3xl flex-col items-start gap-4 px-4 py-12 sm:gap-6 sm:px-6 sm:py-[72px] sm:pb-[84px]">
           <span className="inline-flex items-center gap-2 rounded-full border border-liberado/40 bg-liberado/18 px-3 py-1.5 text-xs font-semibold text-[#7EF0CC] sm:px-3.5">
             🔒 Pagamento protegido em custódia
@@ -101,6 +113,27 @@ export function HomePage() {
       </section>
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
+        {listingsError ? (
+          <div className="pt-6">
+            <AuthAlert variant="error">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span>{listingsError}</span>
+                <button
+                  type="button"
+                  onClick={dismissListingsError}
+                  className="cursor-pointer text-sm font-semibold underline"
+                >
+                  Fechar
+                </button>
+              </div>
+            </AuthAlert>
+          </div>
+        ) : null}
+
+        {!listingsLoading && allListings.length === 0 && !listingsError ? (
+          <p className="pt-6 text-center text-cinza">Nenhum anúncio disponível no momento.</p>
+        ) : null}
+
         <section className="py-6 sm:py-10">
           <div className="mb-3 flex items-center justify-between gap-3 sm:mb-5">
             <h2 className="font-display text-base font-extrabold tracking-tight text-solo uppercase italic sm:text-2xl sm:normal-case sm:not-italic md:text-3xl">
@@ -170,7 +203,7 @@ export function HomePage() {
               <p className="mb-6 leading-relaxed text-white/80">
                 Todo pagamento passa pela custódia da Trade2Fly. O vendedor só recebe quando você confirma que está tudo certo com o equipamento.
               </p>
-              <Button onClick={() => navigate('/')}>Saiba mais</Button>
+              <Button onClick={() => navigate('/faq#escrow')}>Saiba mais</Button>
             </div>
             <div className="flex flex-col gap-3.5">
               {protectionItems.map((item) => (

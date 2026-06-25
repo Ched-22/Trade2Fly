@@ -77,7 +77,7 @@ export function UserMenu({ user, onLogout }: UserMenuProps) {
 
   const secondaryItems: MenuItem[] = [
     { label: 'Configurações', icon: <Settings className="h-[18px] w-[18px]" />, onClick: () => go('/configuracoes') },
-    { label: 'Ajuda e suporte', icon: <CircleHelp className="h-[18px] w-[18px]" />, onClick: () => go('/ajuda') },
+    { label: 'Ajuda e suporte', icon: <CircleHelp className="h-[18px] w-[18px]" />, onClick: () => go('/faq') },
   ];
 
   const renderItem = (item: MenuItem) => (

@@ -1,4 +1,4 @@
-import { IsBoolean, IsNotEmpty, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { IsBoolean, IsIn, IsNotEmpty, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateListingDto {
@@ -47,9 +47,10 @@ export class CreateListingDto {
   @IsString()
   category: string;
 
-  @ApiProperty({ enum: ['Novo', 'Usado'] })
+  @ApiProperty({ enum: ['Novo', 'Bom', 'Usado'] })
   @IsNotEmpty()
   @IsString()
+  @IsIn(['Novo', 'Bom', 'Usado'])
   condition: string;
 
   @ApiProperty()
