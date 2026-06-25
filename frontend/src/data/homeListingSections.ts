@@ -1,4 +1,5 @@
 import type { Listing } from '../types/listing';
+import { sortListingsByNewest } from '../lib/listingTransform';
 
 const sectionLimit = 6;
 
@@ -31,7 +32,7 @@ export const homeListingSections: HomeListingSectionConfig[] = [
     subtitle: 'Anúncios adicionados nos últimos dias.',
     seeMorePath: '/busca?sort=newest',
     selectListings: (listings) =>
-      takeLimit([...listings].sort((a, b) => b.id - a.id)),
+      takeLimit(sortListingsByNewest(listings)),
   },
   {
     id: 'escrow',

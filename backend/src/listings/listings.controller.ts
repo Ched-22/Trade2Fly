@@ -9,9 +9,13 @@ import {
   Post,
   Query,
   Request,
+  UploadedFiles,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import { ApiBearerAuth, ApiConsumes, ApiTags } from '@nestjs/swagger';
+import { memoryStorage } from 'multer';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ListingsService } from './listings.service';
 import { CreateListingDto } from './dto/create-listing.dto';
@@ -28,9 +32,34 @@ export class ListingsController {
     return this.listingsService.findAll(filters);
   }
 
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Get('me/listings')
+  myListings(@Request() req: any) {
+    return this.listingsService.findBySeller(req.user.id);
+  }
+
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.listingsService.findOne(id);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/photos')
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(
+    FilesInterceptor('photos', 8, {
+      storage: memoryStorage(),
+      limits: { fileSize: 2 * 1024 * 1024 },
+    }),
+  )
+  uploadPhotos(
+    @Param('id', ParseIntPipe) id: number,
+    @Request() req: any,
+    @UploadedFiles() files: Express.Multer.File[],
+  ) {
+    return this.listingsService.uploadPhotos(id, req.user.id, files ?? []);
   }
 
   @ApiBearerAuth()
@@ -56,12 +85,5 @@ export class ListingsController {
   @Delete(':id')
   remove(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
     return this.listingsService.remove(id, req.user.id);
-  }
-
-  @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
-  @Get('me/listings')
-  myListings(@Request() req: any) {
-    return this.listingsService.findBySeller(req.user.id);
   }
 }

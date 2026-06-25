@@ -8,7 +8,7 @@ import { AuthPage } from '../pages/AuthPage';
 import { CheckoutPage } from '../pages/CheckoutPage';
 import { CreateListingPage } from '../pages/CreateListingPage';
 import { FavoritesPage } from '../pages/FavoritesPage';
-import { HelpPage } from '../pages/HelpPage';
+import { FaqPage } from '../pages/FaqPage';
 import { HomePage } from '../pages/HomePage';
 import { ListingPage } from '../pages/ListingPage';
 import { MessagesPage } from '../pages/MessagesPage';
@@ -117,14 +117,8 @@ export function AppRoutes() {
             </ProtectedRoute>
           }
         />
-        <Route
-          path="ajuda"
-          element={
-            <ProtectedRoute>
-              <HelpPage />
-            </ProtectedRoute>
-          }
-        />
+        <Route path="faq" element={<FaqPage />} />
+        <Route path="ajuda" element={<Navigate to="/faq" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

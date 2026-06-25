@@ -1,12 +1,16 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { MediaService } from '../media/media.service';
 import { CreateListingDto } from './dto/create-listing.dto';
 import { UpdateListingDto } from './dto/update-listing.dto';
 import { FilterListingDto } from './dto/filter-listing.dto';
 
 @Injectable()
 export class ListingsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mediaService: MediaService,
+  ) {}
 
   async findAll(filters: FilterListingDto) {
     const where: any = { active: true };
@@ -55,7 +59,12 @@ export class ListingsService {
 
   async create(sellerId: string, dto: CreateListingDto) {
     const listing = await this.prisma.listing.create({
-      data: { ...dto, sellerId },
+      data: {
+        ...dto,
+        sellerId,
+        active: true,
+        escrow: true,
+      },
       include: { seller: { select: { id: true, displayName: true, initials: true } } },
     });
     return this.formatListing(listing);
@@ -92,6 +101,20 @@ export class ListingsService {
     return listings.map((l) => this.formatListing(l));
   }
 
+  async uploadPhotos(id: number, userId: string, files: Express.Multer.File[]) {
+    const listing = await this.prisma.listing.findUnique({ where: { id } });
+    if (!listing) throw new NotFoundException('Anúncio não encontrado');
+    if (listing.sellerId !== userId) throw new ForbiddenException();
+
+    const imageUrls = await this.mediaService.replaceListingPhotos(id, files);
+    const updated = await this.prisma.listing.update({
+      where: { id },
+      data: { imageUrls },
+      include: { seller: { select: { id: true, displayName: true, initials: true } } },
+    });
+    return this.formatListing(updated);
+  }
+
   private formatListing(listing: any) {
     return {
       id: listing.id,
@@ -108,9 +131,10 @@ export class ListingsService {
       location: listing.location,
       escrow: listing.escrow,
       description: listing.description,
+      imageUrls: listing.imageUrls ?? [],
       sellerId: listing.sellerId,
       sellerName: listing.seller?.displayName ?? '',
-      createdAt: listing.createdAt,
+      createdAt: listing.createdAt?.toISOString?.() ?? listing.createdAt,
     };
   }
 }

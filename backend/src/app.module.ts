@@ -7,6 +7,7 @@ import { ListingsModule } from './listings/listings.module';
 import { FavoritesModule } from './favorites/favorites.module';
 import { MessagesModule } from './messages/messages.module';
 import { OrdersModule } from './orders/orders.module';
+import { MediaModule } from './media/media.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { OrdersModule } from './orders/orders.module';
     AuthModule,
     UsersModule,
     ListingsModule,
+    MediaModule,
     FavoritesModule,
     MessagesModule,
     OrdersModule,

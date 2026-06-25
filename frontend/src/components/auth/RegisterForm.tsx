@@ -140,11 +140,11 @@ export function RegisterForm() {
         />
         <span>
           Li e aceito os{' '}
-          <Link to="/ajuda" className="font-semibold text-voo hover:text-voo-dark">
+          <Link to="/faq" className="font-semibold text-voo hover:text-voo-dark">
             Termos de Uso
           </Link>{' '}
           e a{' '}
-          <Link to="/ajuda" className="font-semibold text-voo hover:text-voo-dark">
+          <Link to="/faq" className="font-semibold text-voo hover:text-voo-dark">
             Política de Privacidade
           </Link>
         </span>

@@ -100,7 +100,7 @@ export function SearchPage() {
             <div>
               <span className="text-sm font-semibold">Condição</span>
               <div className="mt-2 flex gap-2">
-                {(['Novo', 'Usado'] as const).map((condition) => (
+                {(['Novo', 'Bom', 'Usado'] as const).map((condition) => (
                   <button
                     key={condition}
                     type="button"

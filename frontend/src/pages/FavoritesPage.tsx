@@ -1,22 +1,30 @@
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { ListingTile } from '../components/ui/ListingTile';
-import { listings } from '../data/mockListings';
 import { useMarketplace } from '../hooks/useMarketplace';
 import { Button } from '../components/ui/Button';
 
 export function FavoritesPage() {
-  const { favorites, toggleFavorite, favCount } = useMarketplace();
+  const { favorites, toggleFavorite, favCount, allListings, listingsLoading } = useMarketplace();
 
-  const favListings = listings
-    .filter((listing) => favorites[listing.id])
-    .map((listing) => ({ ...listing, fav: true }));
+  const favListings = useMemo(
+    () =>
+      allListings
+        .filter((listing) => favorites[listing.id])
+        .map((listing) => ({ ...listing, fav: true })),
+    [allListings, favorites],
+  );
 
   return (
     <div className="t2f-page">
       <h1 className="mb-2 font-display text-3xl font-extrabold tracking-tight">Favoritos</h1>
-      <p className="mb-8 text-cinza">{favCount} {favCount === 1 ? 'item salvo' : 'itens salvos'}</p>
+      <p className="mb-8 text-cinza">
+        {listingsLoading ? 'Carregando…' : `${favCount} ${favCount === 1 ? 'item salvo' : 'itens salvos'}`}
+      </p>
 
-      {favListings.length > 0 ? (
+      {listingsLoading ? (
+        <p className="text-cinza">Carregando anúncios…</p>
+      ) : favListings.length > 0 ? (
         <div className="t2f-grid">
           {favListings.map((listing) => (
             <ListingTile key={listing.id} listing={listing} onToggleFavorite={toggleFavorite} />

@@ -42,6 +42,7 @@ model Listing {
   location    String
   escrow      Boolean  @default(false)
   description String?
+  imageUrls   String[] @default([])
   active      Boolean  @default(true)
   sellerId    String
   createdAt   DateTime @default(now())

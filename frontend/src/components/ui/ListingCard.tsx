@@ -1,6 +1,7 @@
 import { Heart, MapPin, Shield } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { Listing } from '../../types/listing';
+import { getListingCoverPhoto } from '../../lib/listingPhotoStorage';
 import { Badge } from './Badge';
 import { cn } from '../../lib/cn';
 
@@ -17,6 +18,9 @@ export function ListingCard({
   onToggleFavorite,
   className,
 }: ListingCardProps) {
+  const coverPhoto =
+    listing.imageUrls?.[0] ?? listing.coverPhotoUrl ?? getListingCoverPhoto(listing.id);
+
   return (
     <article
       className={cn(
@@ -26,8 +30,12 @@ export function ListingCard({
     >
       <Link to={`/anuncio/${listing.id}`} className="block">
         <div
-          className="relative h-44"
-          style={{ background: listing.grad }}
+          className="relative h-44 bg-cover bg-center"
+          style={
+            coverPhoto
+              ? { backgroundImage: `url(${coverPhoto})` }
+              : { background: listing.grad }
+          }
         >
           {listing.escrow ? (
             <Badge variant="escrow" className="absolute top-3 left-3">
