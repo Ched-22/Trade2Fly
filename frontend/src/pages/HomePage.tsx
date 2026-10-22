@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthAlert } from '../components/auth/AuthAlert';
 import { HomeListingSection } from '../components/home/HomeListingSection';
-import { ToolCard } from '../components/tools/ToolCard';
 import { CategoryCard } from '../components/ui/CategoryCard';
 import { CategoryPill } from '../components/ui/CategoryPill';
 import { Button } from '../components/ui/Button';
@@ -11,7 +10,6 @@ import {
   categoryCards,
   homeSeals,
   protectionItems,
-  resources,
   reviews,
 } from '../data/mockCategories';
 import { homeListingSections } from '../data/homeListingSections';
@@ -181,15 +179,6 @@ export function HomePage() {
             onToggleFavorite={toggleFavorite}
           />
         ))}
-
-        <section className="py-10 sm:py-14">
-          <h2 className="mb-5 font-display text-2xl font-extrabold tracking-tight sm:mb-6 sm:text-3xl">Ferramentas para skydivers</h2>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[repeat(auto-fill,minmax(230px,1fr))] sm:gap-4">
-            {resources.map((resource) => (
-              <ToolCard key={resource.path} {...resource} />
-            ))}
-          </div>
-        </section>
 
         <section className="py-8 sm:py-12">
           <div className="grid items-center gap-6 rounded-2xl bg-gradient-to-br from-altitude to-[#16456e] p-6 text-white sm:gap-10 sm:rounded-3xl sm:p-12 md:grid-cols-2">

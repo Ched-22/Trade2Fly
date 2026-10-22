@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { Link } from 'react-router-dom';
 import { AuthAlert } from '../components/auth/AuthAlert';
 import { CategoryFieldsPanel } from '../components/sell/CategoryFieldsPanel';
 import { ConditionSelector } from '../components/sell/ConditionSelector';
 import { ListingFormSection } from '../components/sell/ListingFormSection';
 import { ListingPhotoUpload } from '../components/sell/ListingPhotoUpload';
 import { ListingPreviewPanel } from '../components/sell/ListingPreviewPanel';
+import { SellerPayoutBreakdown } from '../components/sell/SellerPayoutBreakdown';
+import { SellerPlatformFeeNotice } from '../components/sell/SellerPlatformFeeNotice';
+import { SellerListingTermsAcceptance } from '../components/sell/SellerListingTermsAcceptance';
 import {
   DraftRestoreBanner,
   ListingSuccessView,
@@ -14,9 +16,10 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Textarea } from '../components/ui/Textarea';
 import { brands, categories } from '../data/mockCategories';
-import { useMarketplace } from '../hooks/useMarketplace';
+import { getSellerCommissionInfo } from '../lib/sellerSalesApi';
 import { ApiError, apiPost } from '../lib/api';
 import { buildListingPayload } from '../lib/buildListingPayload';
+import { useMarketplace } from '../hooks/useMarketplace';
 import { resolvePhotoFiles, uploadListingPhotos } from '../lib/listingMediaApi';
 import { saveListingPhotos } from '../lib/listingPhotoStorage';
 import {
@@ -26,6 +29,8 @@ import {
   loadListingDraft,
   saveListingDraft,
 } from '../lib/listingDraftStorage';
+import { formatCep, normalizeCep } from '../lib/shippingEstimate';
+import { fetchAddressByCep } from '../lib/viacep';
 import {
   hasFormErrors,
   validateListingForm,
@@ -48,6 +53,7 @@ const ERROR_FIELD_ORDER: (keyof ListingFormErrors)[] = [
   'modelNotes',
   'condition',
   'priceNum',
+  'postalCode',
   'location',
   'description',
 ];
@@ -75,11 +81,29 @@ export function CreateListingPage() {
   const [published, setPublished] = useState<{ id: number; title: string } | null>(null);
   const [showDraftBanner, setShowDraftBanner] = useState(false);
   const [draftWarning, setDraftWarning] = useState<string | null>(null);
+  const [postalCodeLoading, setPostalCodeLoading] = useState(false);
+  const [acceptedSellerTerms, setAcceptedSellerTerms] = useState(false);
+  const [sellerTermsError, setSellerTermsError] = useState('');
+  const [firstSaleExempt, setFirstSaleExempt] = useState(false);
 
   useEffect(() => {
     if (hasListingDraft()) {
       setShowDraftBanner(true);
     }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    getSellerCommissionInfo()
+      .then((info) => {
+        if (!cancelled) setFirstSaleExempt(info.firstSaleExempt);
+      })
+      .catch(() => {
+        if (!cancelled) setFirstSaleExempt(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -108,6 +132,33 @@ export function CreateListingPage() {
     [],
   );
 
+  const handlePostalCodeBlur = async () => {
+    const digits = normalizeCep(form.postalCode);
+    if (digits.length !== 8) return;
+
+    setPostalCodeLoading(true);
+    try {
+      const address = await fetchAddressByCep(digits);
+      if (!address) {
+        setErrors((current) => ({
+          ...current,
+          postalCode: 'CEP não encontrado. Verifique e tente novamente.',
+        }));
+        return;
+      }
+
+      updateField('postalCode', digits);
+      updateField('location', `${address.city}, ${address.state}`);
+    } catch {
+      setErrors((current) => ({
+        ...current,
+        postalCode: 'Não foi possível consultar o CEP. Tente novamente.',
+      }));
+    } finally {
+      setPostalCodeLoading(false);
+    }
+  };
+
   const handleRestoreDraft = () => {
     const draft = loadListingDraft();
     if (draft) {
@@ -134,9 +185,20 @@ export function CreateListingPage() {
       return;
     }
 
+    if (!acceptedSellerTerms) {
+      setSellerTermsError('Você precisa aceitar os termos e declarar ciência das taxas para publicar.');
+      document.getElementById('listing-field-sellerTerms')?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+      return;
+    }
+
+    setSellerTermsError('');
+
     setSubmitting(true);
     try {
-      const payload = buildListingPayload(form);
+      const payload = buildListingPayload(form, acceptedSellerTerms);
       const created = await apiPost<CreatedListing>('/api/listings', payload);
 
       setUploadingPhotos(true);
@@ -167,7 +229,7 @@ export function CreateListingPage() {
   };
 
   if (published) {
-    return <ListingSuccessView title={published.title} listingId={published.id} />;
+    return <ListingSuccessView title={published.title} listingId={published.id} firstSaleExempt={firstSaleExempt} />;
   }
 
   return (
@@ -175,9 +237,10 @@ export function CreateListingPage() {
       <h1 className="mb-2 font-display text-2xl font-extrabold tracking-tight sm:text-3xl">
         Publicar anúncio
       </h1>
-      <p className="mb-6 text-cinza sm:mb-8">
+      <p className="mb-4 text-cinza sm:mb-6">
         Preencha os dados do equipamento. Pagamento protegido disponível para compradores.
       </p>
+      <SellerPlatformFeeNotice className="mb-6 sm:mb-8" firstSaleExempt={firstSaleExempt} />
 
       {showDraftBanner ? (
         <DraftRestoreBanner onRestore={handleRestoreDraft} onDiscard={handleDiscardDraft} />
@@ -303,22 +366,41 @@ export function CreateListingPage() {
               />
               </div>
               <p className="text-sm text-cinza">
-                Não sabe quanto cobrar?{' '}
-                <Link to="/ferramentas/calculadora-valor" className="font-semibold text-voo">
-                  Use a calculadora de valor
-                </Link>
+                Pesquise anúncios similares na plataforma para definir um preço competitivo.
               </p>
+              {Number(form.priceNum) > 0 ? (
+                <SellerPayoutBreakdown
+                  amount={Number(form.priceNum)}
+                  className="mt-3"
+                  commissionExempt={firstSaleExempt}
+                />
+              ) : null}
             </ListingFormSection>
 
             <ListingFormSection title="6. Localização">
-              <div id="listing-field-location">
-              <Input
-                label="Localização"
-                placeholder="São Paulo, SP"
-                value={form.location}
-                onChange={(event) => updateField('location', event.target.value)}
-                error={errors.location}
-              />
+              <div id="listing-field-postalCode" className="space-y-3">
+                <Input
+                  label="CEP de origem do envio"
+                  placeholder="00000-000"
+                  value={formatCep(form.postalCode)}
+                  onChange={(event) => updateField('postalCode', normalizeCep(event.target.value))}
+                  onBlur={() => void handlePostalCodeBlur()}
+                  error={errors.postalCode}
+                />
+                <p className="text-sm text-cinza">
+                  Usado para calcular o frete no checkout. Informe o CEP de onde o equipamento será
+                  enviado.
+                </p>
+              </div>
+              <div id="listing-field-location" className="mt-3">
+                <Input
+                  label="Cidade e estado"
+                  placeholder="Preenchido automaticamente pelo CEP"
+                  value={form.location}
+                  onChange={(event) => updateField('location', event.target.value)}
+                  error={errors.location}
+                  disabled={postalCodeLoading}
+                />
               </div>
             </ListingFormSection>
 
@@ -338,6 +420,17 @@ export function CreateListingPage() {
 
             {submitError ? <AuthAlert variant="error">{submitError}</AuthAlert> : null}
 
+            <SellerPlatformFeeNotice firstSaleExempt={firstSaleExempt} />
+
+            <SellerListingTermsAcceptance
+              checked={acceptedSellerTerms}
+              onChange={(checked) => {
+                setAcceptedSellerTerms(checked);
+                setSellerTermsError('');
+              }}
+              error={sellerTermsError}
+            />
+
             <Button type="submit" size="lg" disabled={submitting} className="w-full sm:w-auto">
               {uploadingPhotos
                 ? 'Enviando fotos…'
@@ -347,7 +440,11 @@ export function CreateListingPage() {
             </Button>
           </div>
 
-          <ListingPreviewPanel form={form} className="lg:sticky lg:top-24" />
+          <ListingPreviewPanel
+            form={form}
+            className="lg:sticky lg:top-24"
+            commissionExempt={firstSaleExempt}
+          />
         </div>
       </form>
     </div>

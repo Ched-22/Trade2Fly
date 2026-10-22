@@ -19,6 +19,7 @@ export type ListingFormState = {
   modelNotes: string;
   condition: ListingCondition | '';
   priceNum: string;
+  postalCode: string;
   location: string;
   escrow: boolean;
   description: string;
@@ -38,6 +39,7 @@ export const emptyListingForm = (): ListingFormState => ({
   modelNotes: '',
   condition: '',
   priceNum: '',
+  postalCode: '',
   location: '',
   escrow: true,
   description: '',

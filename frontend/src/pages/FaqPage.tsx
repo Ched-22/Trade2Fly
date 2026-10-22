@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { FaqSectionBlock } from '../components/faq/FaqSectionBlock';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -66,13 +65,6 @@ export function FaqPage() {
         <a href={`mailto:${SUPPORT_EMAIL}`}>
           <Button variant="secondary">{SUPPORT_EMAIL}</Button>
         </a>
-        <p className="mt-4 text-xs text-cinza">
-          Ou explore os{' '}
-          <Link to="/ferramentas" className="font-semibold text-voo hover:text-voo-dark">
-            guias e calculadoras
-          </Link>{' '}
-          antes de comprar.
-        </p>
       </div>
     </div>
   );

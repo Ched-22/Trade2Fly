@@ -1,3 +1,18 @@
+export type ListingSaleMode = 'direct' | 'offersOnly';
+
+export type CheckoutGrantInfo = {
+  canCheckout: boolean;
+  agreedPrice: number;
+  threadId: number;
+  expiresAt: string;
+  expired?: boolean;
+};
+
+export type ListingActiveOrder = {
+  id: number;
+  status: string;
+};
+
 export type Listing = {
   id: number;
   title: string;
@@ -12,13 +27,19 @@ export type Listing = {
   category: string;
   condition: string;
   location: string;
+  postalCode?: string;
   escrow: boolean;
   seller: string;
+  sellerId: string;
   grad: string;
   description?: string;
   imageUrls?: string[];
   coverPhotoUrl?: string;
   createdAt?: string;
+  saleMode?: ListingSaleMode;
+  active?: boolean;
+  activeOrder?: ListingActiveOrder | null;
+  checkoutGrant?: CheckoutGrantInfo | null;
 };
 
 export type Filters = {

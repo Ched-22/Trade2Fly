@@ -6,6 +6,7 @@ import {
   Settings,
   ShoppingBag,
   Store,
+  TrendingUp,
   User,
 } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
@@ -70,6 +71,7 @@ export function UserMenu({ user, onLogout }: UserMenuProps) {
   const primaryItems: MenuItem[] = [
     { label: 'Meu perfil', icon: <User className="h-[18px] w-[18px]" />, onClick: () => go('/perfil') },
     { label: 'Meus anúncios', icon: <Store className="h-[18px] w-[18px]" />, onClick: () => go('/meus-anuncios') },
+    { label: 'Minhas vendas', icon: <TrendingUp className="h-[18px] w-[18px]" />, onClick: () => go('/vendas') },
     { label: 'Meus pedidos', icon: <ShoppingBag className="h-[18px] w-[18px]" />, onClick: () => go('/pedidos') },
     { label: 'Favoritos', icon: <Heart className="h-[18px] w-[18px]" />, onClick: () => go('/favoritos') },
     { label: 'Mensagens', icon: <MessageCircle className="h-[18px] w-[18px]" />, onClick: () => go('/mensagens') },
@@ -121,7 +123,7 @@ export function UserMenu({ user, onLogout }: UserMenuProps) {
       {open ? (
         <div
           role="menu"
-          className="absolute top-full right-0 z-[60] mt-2 w-[min(100vw-2rem,280px)] overflow-hidden rounded-lg border border-nuvem bg-white py-1 text-solo shadow-lg sm:w-auto sm:min-w-[240px]"
+          className="absolute top-full right-0 z-[80] mt-2 w-[min(100vw-2rem,280px)] overflow-hidden rounded-lg border border-nuvem bg-white py-1 text-solo shadow-lg sm:w-auto sm:min-w-[240px]"
           onClick={(event) => event.stopPropagation()}
         >
           <div className="px-4 py-3">

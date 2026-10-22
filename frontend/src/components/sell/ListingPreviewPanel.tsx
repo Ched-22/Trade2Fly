@@ -1,5 +1,8 @@
 import { MapPin, Shield } from 'lucide-react';
 import { buildSpecsString } from '../../lib/buildListingPayload';
+import { formatCep } from '../../lib/shippingEstimate';
+import { SellerPayoutBreakdown } from './SellerPayoutBreakdown';
+import { SellerPlatformFeeNotice } from './SellerPlatformFeeNotice';
 import type { ListingFormState } from '../../types/listingForm';
 import { Badge } from '../ui/Badge';
 
@@ -8,6 +11,7 @@ const FALLBACK_GRAD = 'linear-gradient(150deg, #0D2B45, #2D7DD2 55%, #3a8ee0)';
 type ListingPreviewPanelProps = {
   form: ListingFormState;
   className?: string;
+  commissionExempt?: boolean;
 };
 
 function formatPrice(value: string): string {
@@ -21,7 +25,11 @@ function resolveBrand(form: ListingFormState): string {
   return form.brand || 'Marca';
 }
 
-export function ListingPreviewPanel({ form, className }: ListingPreviewPanelProps) {
+export function ListingPreviewPanel({
+  form,
+  className,
+  commissionExempt = false,
+}: ListingPreviewPanelProps) {
   const coverPhoto = form.photos[0]?.previewUrl;
   const specs = form.category ? buildSpecsString(form) : '';
   const brandLine = resolveBrand(form);
@@ -42,7 +50,7 @@ export function ListingPreviewPanel({ form, className }: ListingPreviewPanelProp
         >
           <Badge variant="escrow" className="absolute top-3 left-3">
             <Shield className="mr-1 inline h-3 w-3" />
-            Escrow
+            Pagamento protegido
           </Badge>
           {form.condition ? (
             <span className="absolute top-3 right-3 rounded bg-white/90 px-2 py-0.5 text-xs font-semibold text-solo">
@@ -66,7 +74,17 @@ export function ListingPreviewPanel({ form, className }: ListingPreviewPanelProp
           <div className="flex items-center gap-1.5 text-sm text-cinza">
             <MapPin className="h-3.5 w-3.5 shrink-0" />
             {form.location.trim() || 'Localização'}
+            {form.postalCode ? ` · CEP ${formatCep(form.postalCode)}` : ''}
           </div>
+          {Number(form.priceNum) > 0 ? (
+            <SellerPayoutBreakdown
+              amount={Number(form.priceNum)}
+              className="mt-3"
+              compact
+              commissionExempt={commissionExempt}
+            />
+          ) : null}
+          <SellerPlatformFeeNotice className="mt-3 text-xs" firstSaleExempt={commissionExempt} />
         </div>
       </article>
     </aside>

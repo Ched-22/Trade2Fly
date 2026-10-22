@@ -1,70 +1,74 @@
 import { Heart, MapPin, Shield } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { getChatSocket } from '../lib/chatSocket';
 import { SendOfferModal } from '../components/listing/SendOfferModal';
 import { AuthAlert } from '../components/auth/AuthAlert';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
-import { formatPrice } from '../data/mockListings';
-import { sellers } from '../data/mockSellers';
+import { formatPrice } from '../lib/priceFormat';
 import { apiGet } from '../lib/api';
+import {
+  formatCheckoutGrantRemaining,
+  isCheckoutGrantActive,
+} from '../lib/checkoutGrantUtils';
 import { getListingPhotos } from '../lib/listingPhotoStorage';
 import { transformListingFromApi, type ListingApiRaw } from '../lib/listingTransform';
+import { useChatContext } from '../context/ChatContext';
+import { useAuthContext } from '../context/AuthContext';
 import { useMarketplace } from '../hooks/useMarketplace';
+import type { CheckoutExpiredEvent, CheckoutUnlockedEvent, ListingSaleModeChangedEvent } from '../types/chat';
 import type { Listing } from '../types/listing';
 
 export function ListingPage() {
   const { listingId } = useParams();
   const navigate = useNavigate();
   const {
-    allListings,
     favorites,
     toggleFavorite,
     setCheckoutListingId,
     setSelectedListingId,
-    sendOffer,
   } = useMarketplace();
+  const { sendOffer } = useChatContext();
+  const { authReady, loggedIn } = useAuthContext();
   const [offerOpen, setOfferOpen] = useState(false);
   const [listing, setListing] = useState<Listing | null>(null);
   const [photos, setPhotos] = useState<string[]>([]);
   const [activePhoto, setActivePhoto] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+  const [sellerSalesCount, setSellerSalesCount] = useState<number | null>(null);
 
   const id = Number(listingId);
 
   useEffect(() => {
+    if (!authReady) return;
+
     if (!id || Number.isNaN(id)) {
       setError('Anúncio inválido.');
       setLoading(false);
       return;
     }
 
-    const applyListing = (data: Listing) => {
-      const apiPhotos = data.imageUrls ?? [];
-      const storedPhotos = apiPhotos.length > 0 ? apiPhotos : getListingPhotos(data.id);
-      setListing({
-        ...data,
-        coverPhotoUrl: storedPhotos[0] ?? data.coverPhotoUrl,
-        imageUrls: apiPhotos.length > 0 ? apiPhotos : data.imageUrls,
-      });
-      setPhotos(storedPhotos);
-      setActivePhoto(0);
-      setError(null);
-      setLoading(false);
-    };
-
-    const fromContext = allListings.find((item) => item.id === id);
-    if (fromContext) {
-      applyListing(fromContext);
-      return;
-    }
-
     let cancelled = false;
     setLoading(true);
+    setError(null);
+
     apiGet<ListingApiRaw>(`/api/listings/${id}`)
       .then((data) => {
-        if (!cancelled) applyListing(transformListingFromApi(data));
+        if (cancelled) return;
+        const apiPhotos = data.imageUrls ?? [];
+        const storedPhotos = apiPhotos.length > 0 ? apiPhotos : getListingPhotos(data.id);
+        const nextListing = transformListingFromApi(data);
+        setListing({
+          ...nextListing,
+          coverPhotoUrl: storedPhotos[0] ?? nextListing.coverPhotoUrl,
+          imageUrls: apiPhotos.length > 0 ? apiPhotos : nextListing.imageUrls,
+        });
+        setPhotos(storedPhotos);
+        setActivePhoto(0);
+        setError(null);
       })
       .catch(() => {
         if (!cancelled) {
@@ -79,7 +83,76 @@ export function ListingPage() {
     return () => {
       cancelled = true;
     };
-  }, [id, allListings]);
+  }, [id, authReady, loggedIn]);
+
+  useEffect(() => {
+    if (!listing?.sellerId) return;
+    let cancelled = false;
+    apiGet<{ completedSalesCount: number }>(`/api/users/${listing.sellerId}`)
+      .then((data) => {
+        if (!cancelled) setSellerSalesCount(data.completedSalesCount);
+      })
+      .catch(() => {
+        if (!cancelled) setSellerSalesCount(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [listing?.sellerId]);
+
+  useEffect(() => {
+    const socket = getChatSocket();
+    if (!socket || !listing) return;
+
+    const refetchListing = () => {
+      apiGet<ListingApiRaw>(`/api/listings/${listing.id}`)
+        .then((data) => setListing(transformListingFromApi(data)))
+        .catch(() => undefined);
+    };
+
+    const onUnlocked = (event: CheckoutUnlockedEvent) => {
+      if (event.listingId === listing.id) refetchListing();
+    };
+
+    const onSaleModeChanged = (event: ListingSaleModeChangedEvent) => {
+      if (event.listingId === listing.id) {
+        setListing((current) =>
+          current ? { ...current, saleMode: event.saleMode } : current,
+        );
+      }
+    };
+
+    const onExpired = (event: CheckoutExpiredEvent) => {
+      if (event.listingId === listing.id) refetchListing();
+    };
+
+    socket.on('checkoutUnlocked', onUnlocked);
+    socket.on('checkoutExpired', onExpired);
+    socket.on('listingSaleModeChanged', onSaleModeChanged);
+
+    return () => {
+      socket.off('checkoutUnlocked', onUnlocked);
+      socket.off('checkoutExpired', onExpired);
+      socket.off('listingSaleModeChanged', onSaleModeChanged);
+    };
+  }, [listing?.id]);
+
+  useEffect(() => {
+    const expiresAt = listing?.checkoutGrant?.expiresAt;
+    if (!expiresAt || !isCheckoutGrantActive(expiresAt)) return;
+
+    const interval = window.setInterval(() => setNow(Date.now()), 30_000);
+    return () => window.clearInterval(interval);
+  }, [listing?.checkoutGrant?.expiresAt]);
+
+  useEffect(() => {
+    const expiresAt = listing?.checkoutGrant?.expiresAt;
+    if (!expiresAt || isCheckoutGrantActive(expiresAt)) return;
+
+    setListing((current) =>
+      current?.checkoutGrant ? { ...current, checkoutGrant: null } : current,
+    );
+  }, [listing?.checkoutGrant?.expiresAt, now]);
 
   if (loading) {
     return (
@@ -100,7 +173,6 @@ export function ListingPage() {
     );
   }
 
-  const seller = sellers[listing.seller] ?? { rating: '5.0', sales: '10' };
   const favorited = !!favorites[listing.id];
   const sellerInitials = listing.seller
     .split(' ')
@@ -127,10 +199,26 @@ export function ListingPage() {
     navigate('/checkout');
   };
 
-  const handleSendOffer = (offerAmount: number, message: string) => {
-    sendOffer(listing, offerAmount, message);
-    navigate('/mensagens');
+  const handleSendOffer = async (offerAmount: number, message: string) => {
+    const threadId = await sendOffer(listing.id, offerAmount, message || undefined);
+    setListing((current) =>
+      current ? { ...current, saleMode: 'offersOnly' } : current,
+    );
+    navigate(`/mensagens?thread=${threadId}`);
   };
+
+  const saleMode = listing.saleMode ?? 'direct';
+  const checkoutGrantActive =
+    listing.checkoutGrant?.canCheckout &&
+    isCheckoutGrantActive(listing.checkoutGrant.expiresAt);
+  const canCheckout = saleMode === 'direct' || checkoutGrantActive;
+  const checkoutPrice = listing.checkoutGrant?.agreedPrice ?? listing.priceNum;
+  const checkoutPriceLabel = formatPrice(checkoutPrice);
+  const checkoutExpiresAt = listing.checkoutGrant?.expiresAt;
+  const checkoutRemainingLabel =
+    checkoutExpiresAt && checkoutGrantActive
+      ? formatCheckoutGrantRemaining(checkoutExpiresAt, now)
+      : null;
 
   const heroPhoto = photos[activePhoto];
   const descriptionText =
@@ -218,7 +306,11 @@ export function ListingPage() {
               <div className="min-w-0">
                 <div className="break-words font-bold">{listing.seller}</div>
                 <div className="text-sm text-cinza">
-                  ★ {seller.rating} · {seller.sales} vendas
+                  {sellerSalesCount === null
+                    ? 'Vendedor Trade2Fly'
+                    : sellerSalesCount === 1
+                      ? '1 venda concluída'
+                      : `${sellerSalesCount} vendas concluídas`}
                 </div>
               </div>
             </div>
@@ -228,12 +320,14 @@ export function ListingPage() {
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-            <Button size="lg" className="w-full sm:flex-1" onClick={goCheckout}>
-              Comprar
-            </Button>
+            {canCheckout ? (
+              <Button size="lg" className="w-full sm:flex-1" onClick={goCheckout}>
+                Comprar{saleMode === 'offersOnly' ? ` · ${checkoutPriceLabel}` : ''}
+              </Button>
+            ) : null}
             <Button
               size="lg"
-              variant="outline"
+              variant={canCheckout ? 'outline' : 'primary'}
               className="w-full sm:flex-1"
               onClick={() => setOfferOpen(true)}
             >
@@ -241,9 +335,26 @@ export function ListingPage() {
             </Button>
           </div>
 
-          <p className="mt-3 text-sm text-cinza">
-            Total estimado com taxas: <span className="font-mono font-bold text-solo">{formatPrice(listing.priceNum + 45)}</span>
-          </p>
+          {saleMode === 'offersOnly' && listing.checkoutGrant?.expired ? (
+            <p className="mt-3 text-sm text-cinza">
+              O prazo de 1 hora para pagamento expirou. Envie uma nova oferta ou peça ao vendedor
+              para liberar o pagamento novamente.
+            </p>
+          ) : null}
+
+          {saleMode === 'offersOnly' && checkoutGrantActive && checkoutRemainingLabel ? (
+            <p className="mt-3 text-sm text-liberado-dark">
+              Pagamento liberado por mais {checkoutRemainingLabel}. Após esse prazo, será necessário
+              enviar uma nova oferta ou pedir ao vendedor para liberar novamente.
+            </p>
+          ) : null}
+
+          {saleMode === 'offersOnly' && !canCheckout && !listing.checkoutGrant?.expired ? (
+            <p className="mt-3 text-sm text-cinza">
+              Este anúncio está em negociação. Envie uma oferta ou aguarde o vendedor liberar o
+              pagamento.
+            </p>
+          ) : null}
         </div>
       </div>
 

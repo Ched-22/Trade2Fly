@@ -9,6 +9,8 @@ const MIME_TO_EXT: Record<string, string> = {
   'image/jpeg': 'jpg',
   'image/png': 'png',
   'image/webp': 'webp',
+  'video/mp4': 'mp4',
+  'video/webm': 'webm',
 };
 
 @Injectable()
@@ -53,5 +55,27 @@ export class LocalStorageDriver implements StorageDriver {
 
   getFilePath(listingId: number, filename: string): string {
     return path.join(this.uploadDir, 'listings', String(listingId), filename);
+  }
+
+  async saveOrderFile(orderId: number, file: Express.Multer.File): Promise<SavedFile> {
+    const ext = MIME_TO_EXT[file.mimetype] ?? 'bin';
+    const filename = `${randomUUID()}.${ext}`;
+    const dir = path.join(this.uploadDir, 'orders', String(orderId));
+    await fs.mkdir(dir, { recursive: true });
+    const absolutePath = path.join(dir, filename);
+    await fs.writeFile(absolutePath, file.buffer);
+    const key = `orders/${orderId}/${filename}`;
+    return {
+      key,
+      publicUrl: this.getOrderPublicUrl(orderId, filename),
+    };
+  }
+
+  getOrderPublicUrl(orderId: number, filename: string): string {
+    return `${this.mediaPublicUrl}/api/media/orders/${orderId}/${filename}`;
+  }
+
+  getOrderFilePath(orderId: number, filename: string): string {
+    return path.join(this.uploadDir, 'orders', String(orderId), filename);
   }
 }

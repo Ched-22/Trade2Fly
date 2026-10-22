@@ -1,18 +1,26 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { json } from 'express';
+import { corsOriginOption, resolveCorsOrigins } from './config/cors-origins';
+import { SocketIoAdapter } from './socket-io.adapter';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const configService = app.get(ConfigService);
+
+  // Avatar do perfil é enviado como data URL (base64) — o limite padrão do Express (100kb) é
+  // pequeno demais para uma foto.
+  app.use(json({ limit: '5mb' }));
+
+  app.useWebSocketAdapter(new SocketIoAdapter(app));
 
   app.setGlobalPrefix('api');
 
   app.enableCors({
-    origin: [
-      process.env.FRONTEND_URL || 'http://localhost:5173',
-      'http://localhost:4173',
-    ],
+    origin: corsOriginOption(resolveCorsOrigins(configService)),
     credentials: true,
   });
 
@@ -20,13 +28,13 @@ async function bootstrap() {
     new ValidationPipe({ whitelist: true, transform: true }),
   );
 
-  const config = new DocumentBuilder()
+  const swaggerConfig = new DocumentBuilder()
     .setTitle('Trade2Fly API')
     .setDescription('Marketplace de equipamentos de paraquedismo')
     .setVersion('1.0')
     .addBearerAuth()
     .build();
-  SwaggerModule.setup('api/docs', app, SwaggerModule.createDocument(app, config));
+  SwaggerModule.setup('api/docs', app, SwaggerModule.createDocument(app, swaggerConfig));
 
   const port = Number(process.env.PORT) || 3000;
 

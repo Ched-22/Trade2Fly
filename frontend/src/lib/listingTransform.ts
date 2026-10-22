@@ -14,12 +14,23 @@ export type ListingApiRaw = {
   category: string;
   condition: string;
   location: string;
+  postalCode?: string | null;
   escrow: boolean;
   sellerName: string;
   sellerId: string;
   description?: string;
   imageUrls?: string[];
   createdAt?: string;
+  saleMode?: 'direct' | 'offersOnly';
+  active?: boolean;
+  activeOrder?: { id: number; status: string } | null;
+  checkoutGrant?: {
+    canCheckout: boolean;
+    agreedPrice: number;
+    threadId: number;
+    expiresAt: string;
+    expired?: boolean;
+  } | null;
 };
 
 const GRAD_COLORS: [string, string, string][] = [
@@ -37,9 +48,16 @@ const GRAD_COLORS: [string, string, string][] = [
   ['#16456e', '#2D7DD2', '#9ecbf0'],
 ];
 
+export function gradForListingId(id: number): string {
+  const safeId = Number.isFinite(id) && id > 0 ? Math.floor(id) : 1;
+  const index =
+    ((safeId - 1) % GRAD_COLORS.length + GRAD_COLORS.length) % GRAD_COLORS.length;
+  const [a, b, c] = GRAD_COLORS[index] ?? GRAD_COLORS[0];
+  return `linear-gradient(150deg, ${a}, ${b} 55%, ${c})`;
+}
+
 export function transformListingFromApi(raw: ListingApiRaw): Listing {
-  const [a, b, c] = GRAD_COLORS[(raw.id - 1) % GRAD_COLORS.length];
-  const grad = `linear-gradient(150deg, ${a}, ${b} 55%, ${c})`;
+  const grad = gradForListingId(raw.id);
   const price = `R$ ${raw.priceNum.toLocaleString('pt-BR')}`;
   const imageUrls = raw.imageUrls ?? [];
   const coverFromApi = imageUrls[0];
@@ -58,13 +76,19 @@ export function transformListingFromApi(raw: ListingApiRaw): Listing {
     category: raw.category,
     condition: raw.condition,
     location: raw.location,
+    postalCode: raw.postalCode ?? undefined,
     escrow: raw.escrow,
     seller: raw.sellerName,
+    sellerId: raw.sellerId,
     grad,
     description: raw.description ?? '',
     imageUrls,
     coverPhotoUrl: coverFromApi ?? coverFromStorage,
     createdAt: raw.createdAt,
+    saleMode: raw.saleMode ?? 'direct',
+    active: raw.active ?? true,
+    activeOrder: raw.activeOrder ?? null,
+    checkoutGrant: raw.checkoutGrant ?? null,
   };
 }
 

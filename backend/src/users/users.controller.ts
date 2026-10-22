@@ -13,7 +13,7 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   @Get('me')
   getMe(@Request() req: any) {
-    return this.usersService.findById(req.user.id);
+    return this.usersService.findMe(req.user.id);
   }
 
   @ApiBearerAuth()

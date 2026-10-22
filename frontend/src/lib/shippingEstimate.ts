@@ -1,4 +1,8 @@
-export const CHECKOUT_PROTECTION_FEE = 45;
+/** Optional shipping insurance fee charged to the buyer (separate from freight). */
+export const CHECKOUT_SHIPPING_INSURANCE_FEE = 45;
+
+/** @deprecated Use CHECKOUT_SHIPPING_INSURANCE_FEE */
+export const CHECKOUT_PROTECTION_FEE = CHECKOUT_SHIPPING_INSURANCE_FEE;
 
 export type ParsedLocation = {
   city: string;

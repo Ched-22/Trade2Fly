@@ -40,7 +40,7 @@ export function ListingCard({
           {listing.escrow ? (
             <Badge variant="escrow" className="absolute top-3 left-3">
               <Shield className="mr-1 inline h-3 w-3" />
-              Escrow
+              Pagamento protegido
             </Badge>
           ) : null}
           {onToggleFavorite ? (

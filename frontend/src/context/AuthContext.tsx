@@ -9,7 +9,7 @@ import {
 } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiGet, apiPost, ApiError, clearToken, getToken, setToken } from '../lib/api';
-import { getAvatarUrl, saveProfile } from '../lib/profileStorage';
+import { saveProfile } from '../lib/profileStorage';
 import { safeReturnPath } from '../hooks/useAuthReturnTo';
 import type { ProfileData } from '../types/profile';
 
@@ -48,13 +48,6 @@ type AuthContextValue = {
   updateProfile: (data: ProfileData) => Promise<void>;
 };
 
-function enrichUser(user: AuthUser): AuthUser {
-  return {
-    ...user,
-    avatarUrl: getAvatarUrl(user.id),
-  };
-}
-
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -69,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     apiGet<AuthUser>('/api/auth/me')
-      .then((authUser) => setUser(enrichUser(authUser)))
+      .then((authUser) => setUser(authUser))
       .catch(() => clearToken())
       .finally(() => setHydrated(true));
   }, []);
@@ -82,7 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           password,
         });
         setToken(token);
-        setUser(enrichUser(authUser));
+        setUser(authUser);
         navigate(safeReturnPath(returnTo));
         return true;
       } catch (error) {
@@ -119,10 +112,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const updateProfile = useCallback(async (data: ProfileData) => {
     if (!user) return;
-    const { sessionPatch } = await saveProfile(user.id, data);
-    setUser((current) =>
-      current ? enrichUser({ ...current, ...sessionPatch }) : current,
-    );
+    const { sessionPatch } = await saveProfile(data);
+    setUser((current) => (current ? { ...current, ...sessionPatch } : current));
   }, [user]);
 
   const value = useMemo<AuthContextValue>(

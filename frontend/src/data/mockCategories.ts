@@ -1,5 +1,3 @@
-import { skydiverToolCards } from './skydiverTools';
-
 export const categories = [
   'Sistemas Completos',
   'Containers',
@@ -71,8 +69,6 @@ export const homeSeals = [
   { icon: '🔔', title: 'Alertas', sub: 'De equipamento' },
 ];
 
-export const resources = skydiverToolCards;
-
 export const protectionItems = [
   'Pagamento via custódia (escrow)',
   'Compromisso com a autenticidade',
@@ -118,9 +114,8 @@ export const footerColumns: FooterColumn[] = [
   {
     title: 'Recursos',
     links: [
-      { label: 'Wingloading', href: '/ferramentas/wingloading' },
-      { label: 'Valor do equipamento', href: '/ferramentas/calculadora-valor' },
-      { label: 'Guia de harness', href: '/ferramentas/guia-harness' },
+      { label: 'Buscar equipamento', href: '/busca' },
+      { label: 'FAQ', href: '/faq' },
       { label: 'Blog' },
     ],
   },
@@ -129,8 +124,10 @@ export const footerColumns: FooterColumn[] = [
     links: [
       { label: 'FAQ', href: '/faq' },
       { label: 'Contato', href: `mailto:suporte@trade2fly.com.br` },
-      { label: 'Taxas' },
-      { label: 'Termos de Uso' },
+      { label: 'Taxas', href: '/faq' },
+      { label: 'Termos de Uso', href: '/legal/termos' },
+      { label: 'Privacidade', href: '/legal/privacidade' },
+      { label: 'Termos do Vendedor', href: '/legal/vendedor' },
     ],
   },
 ];

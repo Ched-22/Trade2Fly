@@ -7,51 +7,148 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id          String   @id @default(cuid())
-  email       String   @unique
-  password    String
-  displayName String
-  initials    String
-  /// false = inativo (aguardando confirmação manual); true = pode entrar
-  active      Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+enum ListingSaleMode {
+  direct
+  offersOnly
+}
 
-  listings      Listing[]
-  favorites     Favorite[]
-  messages      Message[]
-  buyerThreads  ChatThread[]       @relation("BuyerThreads")
-  sellerThreads ChatThread[]       @relation("SellerThreads")
-  orders        Order[]
-  resetTokens   PasswordResetToken[]
+enum CheckoutGrantStatus {
+  active
+  used
+  revoked
+  expired
+}
+
+enum MessageType {
+  text
+  offer
+  offer_accepted
+  offer_declined
+}
+
+enum UserRole {
+  user
+  admin
+}
+
+enum OrderStatus {
+  awaiting_payment
+  awaiting_shipment
+  shipment_in_progress
+  shipped
+  disputed
+  completed
+  cancelled
+  refunded
+}
+
+enum NotificationType {
+  order_purchased
+  order_shipped
+  order_completed
+  order_auto_completed
+  order_disputed
+  dispute_admin_replied
+  dispute_buyer_replied
+  checkout_available
+}
+
+enum OrderProofKind {
+  product_photo
+  boxed_photo
+  packing_video
+  unboxing_video
+  received_photo
+}
+
+enum PaymentMethodType {
+  card
+  pix
+}
+
+enum EscrowStatus {
+  not_applicable
+  held
+  released
+  refunded
+}
+
+model User {
+  id              String   @id @default(cuid())
+  email           String   @unique
+  password        String
+  displayName     String
+  initials        String
+  /// false = inativo (aguardando confirmação manual); true = pode entrar
+  active          Boolean  @default(false)
+  role            UserRole @default(user)
+  cpfCnpj         String?
+  asaasCustomerId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  /// Chave Pix de recebimento do vendedor. O valor da venda fica retido na conta principal da
+  /// Trade2Fly e só é transferido para essa chave quando o comprador confirma o recebimento.
+  payoutPixKeyType      String?
+  payoutPixKeyEncrypted String?
+  payoutPixKeyMasked    String?
+
+  /// Dados de perfil público (editáveis em Perfil > Dados de contato).
+  firstName String?
+  lastName  String?
+  bio       String?
+  city      String?
+  dropzone  String?
+  phone     String?
+  avatarUrl String?
+
+  listings             Listing[]
+  favorites            Favorite[]
+  messages             Message[]
+  buyerThreads         ChatThread[]         @relation("BuyerThreads")
+  sellerThreads        ChatThread[]         @relation("SellerThreads")
+  threadReads          ChatThreadRead[]
+  orders               Order[]
+  resetTokens          PasswordResetToken[]
+  checkoutGrants       CheckoutGrant[]      @relation("BuyerGrants")
+  sellerCheckoutGrants CheckoutGrant[]      @relation("SellerGrants")
+  checkoutViolations   CheckoutViolation[]
+  notifications        Notification[]
+  orderProofFiles      OrderProofFile[]
+  paymentMethods       PaymentMethod[]
 }
 
 model Listing {
-  id          Int      @id @default(autoincrement())
-  title       String
-  priceNum    Float
-  specs       String   @default("")
-  size        String?
-  jumps       String?
-  year        String?
-  weight      String?
-  brand       String?
-  category    String
-  condition   String
-  location    String
-  escrow      Boolean  @default(false)
-  description String?
-  imageUrls   String[] @default([])
-  active      Boolean  @default(true)
-  sellerId    String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                    Int             @id @default(autoincrement())
+  title                 String
+  priceNum              Float
+  specs                 String          @default("")
+  size                  String?
+  jumps                 String?
+  year                  String?
+  weight                String?
+  brand                 String?
+  category              String
+  condition             String
+  location              String
+  postalCode            String?
+  escrow                Boolean         @default(false)
+  description           String?
+  imageUrls             String[]        @default([])
+  active                Boolean         @default(true)
+  saleMode              ListingSaleMode @default(direct)
+  sellerId              String
+  sellerTermsAcceptedAt DateTime?
+  sellerTermsVersion    String?
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
 
-  seller    User         @relation(fields: [sellerId], references: [id])
-  favorites Favorite[]
-  threads   ChatThread[]
-  orders    Order[]
+  seller             User                @relation(fields: [sellerId], references: [id])
+  favorites          Favorite[]
+  threads            ChatThread[]
+  orders             Order[]
+  checkoutGrants     CheckoutGrant[]
+  checkoutViolations CheckoutViolation[]
 }
 
 model Favorite {
@@ -73,37 +170,194 @@ model ChatThread {
   listingId Int
   createdAt DateTime @default(now())
 
-  buyer    User      @relation("BuyerThreads", fields: [buyerId], references: [id])
-  seller   User      @relation("SellerThreads", fields: [sellerId], references: [id])
-  listing  Listing   @relation(fields: [listingId], references: [id])
-  messages Message[]
+  buyer          User             @relation("BuyerThreads", fields: [buyerId], references: [id])
+  seller         User             @relation("SellerThreads", fields: [sellerId], references: [id])
+  listing        Listing          @relation(fields: [listingId], references: [id])
+  messages       Message[]
+  reads          ChatThreadRead[]
+  checkoutGrants CheckoutGrant[]
 
   @@unique([buyerId, listingId])
 }
 
+model ChatThreadRead {
+  userId   String
+  threadId Int
+  readAt   DateTime @default(now())
+
+  user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  thread ChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@id([userId, threadId])
+  @@map("chat_thread_reads")
+}
+
 model Message {
-  id        Int        @id @default(autoincrement())
-  threadId  Int
-  senderId  String
-  text      String
-  createdAt DateTime   @default(now())
+  id          Int         @id @default(autoincrement())
+  threadId    Int
+  senderId    String
+  text        String
+  messageType MessageType @default(text)
+  offerAmount Float?
+  createdAt   DateTime    @default(now())
 
   thread ChatThread @relation(fields: [threadId], references: [id])
   sender User       @relation(fields: [senderId], references: [id])
 }
 
-model Order {
-  id          Int      @id @default(autoincrement())
-  buyerId     String
+model CheckoutGrant {
+  id          Int                 @id @default(autoincrement())
   listingId   Int
-  amount      Float
-  paymentType String
-  status      String   @default("pending")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  threadId    Int
+  buyerId     String
+  sellerId    String
+  agreedPrice Float
+  status      CheckoutGrantStatus @default(active)
+  expiresAt   DateTime
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
 
-  buyer   User    @relation(fields: [buyerId], references: [id])
-  listing Listing @relation(fields: [listingId], references: [id])
+  listing Listing    @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  thread  ChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  buyer   User       @relation("BuyerGrants", fields: [buyerId], references: [id], onDelete: Cascade)
+  seller  User       @relation("SellerGrants", fields: [sellerId], references: [id], onDelete: Cascade)
+}
+
+model CheckoutViolation {
+  id              Int      @id @default(autoincrement())
+  userId          String
+  listingId       Int
+  attemptedAmount Float
+  agreedPrice     Float
+  createdAt       DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+}
+
+model Order {
+  id                     Int          @id @default(autoincrement())
+  buyerId                String
+  listingId              Int
+  amount                 Float
+  /// Valor efetivamente cobrado do comprador (amount + juros do parcelamento no cartão 2x+). Igual a `amount` para Pix/boleto/1x.
+  chargeAmount           Float?
+  paymentType            String
+  installments           Int?
+  cpfCnpj                String?
+  asaasCustomerId        String?
+  asaasPaymentId         String?      @unique
+  asaasPaymentStatus     String?
+  pixPayload             String?
+  pixQrCodeBase64        String?
+  bankSlipUrl            String?
+  invoiceUrl             String?
+  status                 OrderStatus  @default(awaiting_payment)
+  /// True when this completed sale was the seller's first — no Trade2Fly commission.
+  commissionExempt       Boolean      @default(false)
+  shippedAt              DateTime?
+  buyerConfirmedAt       DateTime?
+  disputedAt             DateTime?
+  disputeReason          String?
+  autoCompleteAt         DateTime?
+  completedAt            DateTime?
+  stripePaymentIntentId  String?
+  /// Situação do valor retido na conta principal da Trade2Fly (só transferido ao vendedor quando o comprador confirma o recebimento).
+  escrowStatus           EscrowStatus @default(held)
+  sellerPayoutTransferId String?
+  escrowReleasedAt       DateTime?
+  createdAt              DateTime     @default(now())
+  updatedAt              DateTime     @updatedAt
+
+  buyer         User             @relation(fields: [buyerId], references: [id])
+  listing       Listing          @relation(fields: [listingId], references: [id])
+  proofFiles    OrderProofFile[]
+  notifications Notification[]
+  dispute       OrderDispute?
+}
+
+enum DisputeStatus {
+  awaiting_admin
+  awaiting_buyer
+  resolved
+}
+
+enum DisputeOutcome {
+  buyer_satisfied
+  refund_buyer
+  release_seller
+}
+
+enum DisputeAuthorType {
+  buyer
+  admin
+}
+
+/// Disputa aberta pelo comprador. Conversa comprador <-> admin (o vendedor só é avisado).
+model OrderDispute {
+  id                 Int             @id @default(autoincrement())
+  orderId            Int             @unique
+  status             DisputeStatus   @default(awaiting_admin)
+  outcome            DisputeOutcome?
+  openedAt           DateTime        @default(now())
+  resolvedAt         DateTime?
+  resolvedByAdminId  String?
+  /// Última mensagem do comprador ainda sem resposta do admin (para ordenar a fila).
+  lastBuyerMessageAt DateTime        @default(now())
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  order    Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  messages DisputeMessage[]
+
+  @@index([status, lastBuyerMessageAt])
+}
+
+model DisputeMessage {
+  id         Int               @id @default(autoincrement())
+  disputeId  Int
+  authorType DisputeAuthorType
+  authorId   String
+  body       String
+  createdAt  DateTime          @default(now())
+
+  dispute OrderDispute @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+
+  @@index([disputeId, createdAt])
+}
+
+model Notification {
+  id        Int              @id @default(autoincrement())
+  userId    String
+  type      NotificationType
+  title     String
+  body      String
+  read      Boolean          @default(false)
+  orderId   Int?
+  listingId Int?
+  createdAt DateTime         @default(now())
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order Order? @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
+}
+
+model OrderProofFile {
+  id              Int            @id @default(autoincrement())
+  orderId         Int
+  kind            OrderProofKind
+  storageKey      String
+  mimeType        String
+  uploadedById    String
+  durationSeconds Int?
+  createdAt       DateTime       @default(now())
+
+  order      Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  uploadedBy User  @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
+
+  @@index([orderId, kind])
 }
 
 model PasswordResetToken {
@@ -115,4 +369,27 @@ model PasswordResetToken {
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id])
+}
+
+model PaymentMethod {
+  id                     String            @id @default(cuid())
+  userId                 String
+  type                   PaymentMethodType
+  brand                  String?
+  last4                  String?
+  expMonth               Int?
+  expYear                Int?
+  holderName             String?
+  pixKeyType             String?
+  pixKeyEncrypted        String?
+  pixKeyMasked           String?
+  gatewayPaymentMethodId String?
+  gatewayCustomerId      String?
+  isDefault              Boolean           @default(false)
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
