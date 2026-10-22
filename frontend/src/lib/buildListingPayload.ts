@@ -13,8 +13,10 @@ export type CreateListingPayload = {
   category: string;
   condition: ListingCondition;
   location: string;
+  postalCode: string;
   escrow: boolean;
   description: string;
+  acceptedSellerTerms: boolean;
 };
 
 function resolveBrand(form: ListingFormState): string {
@@ -61,7 +63,10 @@ export function buildSpecsString(form: ListingFormState): string {
   return parts.join(' · ');
 }
 
-export function buildListingPayload(form: ListingFormState): CreateListingPayload {
+export function buildListingPayload(
+  form: ListingFormState,
+  acceptedSellerTerms: boolean,
+): CreateListingPayload {
   const brand = resolveBrand(form);
   const specs = buildSpecsString(form);
 
@@ -77,7 +82,9 @@ export function buildListingPayload(form: ListingFormState): CreateListingPayloa
     category: form.category,
     condition: form.condition as ListingCondition,
     location: form.location.trim(),
+    postalCode: form.postalCode.replace(/\D/g, ''),
     escrow: true,
     description: form.description.trim(),
+    acceptedSellerTerms,
   };
 }

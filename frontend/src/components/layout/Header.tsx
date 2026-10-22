@@ -1,15 +1,18 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Heart, Menu, MessageCircle, Search } from 'lucide-react';
+import { Bell, Heart, Menu, MessageCircle, Search } from 'lucide-react';
 import { categories } from '../../data/mockCategories';
 import { useAuth } from '../../hooks/useAuth';
 import { useMarketplace } from '../../hooks/useMarketplace';
+import { useChatContext } from '../../context/ChatContext';
 import { Logo } from './Logo';
 import { UserMenu } from './UserMenu';
+import { LanguageSwitcher } from './LanguageSwitcher';
 
 export function Header() {
   const navigate = useNavigate();
   const { loggedIn, user, logout } = useAuth();
   const { query, setQuery, favCount } = useMarketplace();
+  const { unreadThreadCount, unreadNotificationCount } = useChatContext();
 
   const submitSearch = () => {
     const params = new URLSearchParams();
@@ -33,16 +36,17 @@ export function Header() {
   );
 
   return (
-    <header className="sticky top-0 z-50 border-b border-nuvem bg-white">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6">
-        <div className="flex h-14 items-center gap-3 sm:h-[68px] sm:gap-4">
+    <header className="sticky top-0 z-50 w-full border-b border-nuvem bg-white">
+      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6">
+        <div className="flex h-14 min-w-0 items-center gap-2 sm:h-[68px] sm:gap-4">
           <Link to="/" className="flex shrink-0 items-center">
             <Logo />
           </Link>
 
           <div className="hidden min-w-0 flex-1 justify-center md:flex">{searchBar}</div>
 
-          <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-2.5">
+          <div className="ml-auto flex min-w-0 shrink items-center gap-1 sm:gap-2.5">
+            <LanguageSwitcher />
             {loggedIn && user ? (
               <>
                 <button
@@ -60,14 +64,29 @@ export function Header() {
                 </button>
                 <button
                   type="button"
+                  aria-label="Notificações"
+                  onClick={() => navigate('/notificacoes')}
+                  className="relative flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border-none bg-transparent text-solo hover:bg-bruma sm:h-10 sm:w-10"
+                >
+                  <Bell className="h-5 w-5" strokeWidth={1.75} />
+                  {unreadNotificationCount > 0 ? (
+                    <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-pull px-1 font-mono text-[10px] font-bold text-white">
+                      {unreadNotificationCount > 9 ? '9+' : unreadNotificationCount}
+                    </span>
+                  ) : null}
+                </button>
+                <button
+                  type="button"
                   aria-label="Mensagens"
                   onClick={() => navigate('/mensagens')}
                   className="relative flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border-none bg-transparent text-solo hover:bg-bruma sm:h-10 sm:w-10"
                 >
                   <MessageCircle className="h-5 w-5" strokeWidth={1.75} />
-                  <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-pull px-1 font-mono text-[10px] font-bold text-white">
-                    2
-                  </span>
+                  {unreadThreadCount > 0 ? (
+                    <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-pull px-1 font-mono text-[10px] font-bold text-white">
+                      {unreadThreadCount > 9 ? '9+' : unreadThreadCount}
+                    </span>
+                  ) : null}
                 </button>
                 <UserMenu user={user} onLogout={logout} />
               </>
@@ -84,37 +103,39 @@ export function Header() {
             <button
               type="button"
               onClick={() => navigate('/vender')}
-              className="inline-flex h-9 shrink-0 cursor-pointer items-center justify-center rounded-lg bg-solo px-4 text-sm font-semibold text-white transition-colors hover:bg-solo/90 sm:h-10 sm:px-5"
+              className="inline-flex h-9 shrink-0 cursor-pointer items-center justify-center rounded-lg bg-solo px-3 text-sm font-semibold text-white transition-colors hover:bg-solo/90 sm:h-10 sm:px-5"
             >
               Vender
             </button>
           </div>
         </div>
 
-        <div className="pb-3 md:hidden">{searchBar}</div>
+        <div className="min-w-0 pb-3 md:hidden">{searchBar}</div>
       </div>
 
-      <nav className="t2f-scroll border-t border-nuvem" aria-label="Categorias">
-        <div className="mx-auto flex max-w-7xl items-center gap-0.5 overflow-x-auto px-4 py-2 sm:gap-1 sm:px-6">
-          {categories.map((category) => (
-            <button
-              key={category}
-              type="button"
-              onClick={() => navigate(`/busca?category=${encodeURIComponent(category)}`)}
-              className="shrink-0 cursor-pointer rounded-md border-none bg-transparent px-2.5 py-1.5 font-sans text-xs font-medium whitespace-nowrap text-solo/80 hover:bg-bruma hover:text-solo sm:px-3 sm:text-sm"
-            >
-              {category}
-            </button>
-          ))}
+      <nav className="w-full border-t border-nuvem" aria-label="Categorias">
+        <div className="mx-auto w-full min-w-0 max-w-7xl px-4 sm:px-6">
+          <div className="t2f-scroll flex w-full min-w-0 items-center gap-0.5 overflow-x-auto py-2 sm:gap-1">
+            {categories.map((category) => (
+              <button
+                key={category}
+                type="button"
+                onClick={() => navigate(`/busca?category=${encodeURIComponent(category)}`)}
+                className="shrink-0 cursor-pointer rounded-md border-none bg-transparent px-2.5 py-1.5 font-sans text-xs font-medium whitespace-nowrap text-solo/80 hover:bg-bruma hover:text-solo sm:px-3 sm:text-sm"
+              >
+                {category}
+              </button>
+            ))}
 
-          <button
-            type="button"
-            onClick={() => navigate('/busca')}
-            className="ml-auto flex shrink-0 cursor-pointer items-center gap-1.5 rounded-md border-none bg-transparent px-2.5 py-1.5 font-sans text-xs font-medium whitespace-nowrap text-solo hover:bg-bruma sm:px-3 sm:text-sm"
-          >
-            <Menu className="h-4 w-4" strokeWidth={1.75} />
-            Todas as categorias
-          </button>
+            <button
+              type="button"
+              onClick={() => navigate('/busca')}
+              className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-md border-none bg-transparent px-2.5 py-1.5 font-sans text-xs font-medium whitespace-nowrap text-solo hover:bg-bruma sm:px-3 sm:text-sm"
+            >
+              <Menu className="h-4 w-4" strokeWidth={1.75} />
+              Todas as categorias
+            </button>
+          </div>
         </div>
       </nav>
     </header>

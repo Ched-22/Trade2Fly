@@ -17,7 +17,7 @@ export function ProfileAccountPage() {
 
   const loadProfile = useCallback(() => {
     if (!user) return;
-    setSavedData(getProfile(user.id, user));
+    void getProfile(user).then(setSavedData);
   }, [user]);
 
   useEffect(() => {

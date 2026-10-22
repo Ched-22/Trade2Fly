@@ -1,37 +1,63 @@
-import { listings } from '../data/mockListings';
-
-const mockOrders = [
-  { id: 'ord-001', listing: listings[0], status: 'Em custódia', date: '12 jun 2026' },
-  { id: 'ord-002', listing: listings[7], status: 'Entregue', date: '3 mai 2026' },
-];
+import { useEffect, useState } from 'react';
+import { OrderHistoryCard } from '../components/orders/OrderHistoryCard';
+import { ScopeTabs } from '../components/ui/ScopeTabs';
+import { getOrders, type OrderListItem, type OrderScope } from '../lib/ordersApi';
 
 export function OrdersPage() {
+  const [scope, setScope] = useState<OrderScope>('active');
+  const [orders, setOrders] = useState<OrderListItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    getOrders(scope)
+      .then((data) => {
+        if (!cancelled) setOrders(data);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [scope]);
+
   return (
     <div className="t2f-page max-w-3xl">
       <h1 className="mb-2 font-display text-3xl font-extrabold tracking-tight">Meus pedidos</h1>
-      <p className="mb-8 text-cinza">Histórico de compras com pagamento protegido.</p>
+      <p className="mb-6 text-cinza">Compras com pagamento protegido.</p>
+
+      <ScopeTabs
+        value={scope}
+        onChange={setScope}
+        options={[
+          { value: 'active', label: 'Em andamento' },
+          { value: 'history', label: 'Histórico' },
+        ]}
+      />
+
+      {loading ? <p className="text-cinza">Carregando…</p> : null}
+
+      {!loading && orders.length === 0 ? (
+        <p className="rounded-xl border border-nuvem bg-white p-6 text-cinza">
+          {scope === 'active'
+            ? 'Você não tem pedidos em andamento.'
+            : 'Nenhum pedido concluído ou cancelado no histórico.'}
+        </p>
+      ) : null}
 
       <div className="space-y-4">
-        {mockOrders.map((order) => (
-          <div
-            key={order.id}
-            className="flex flex-wrap items-center gap-4 rounded-xl border border-nuvem bg-white p-4"
-          >
-            <div
-              className="h-16 w-16 shrink-0 rounded-lg"
-              style={{ background: order.listing.grad }}
-            />
-            <div className="min-w-0 flex-1">
-              <div className="font-bold">{order.listing.title}</div>
-              <div className="font-mono text-sm text-pull">{order.listing.price}</div>
-              <div className="text-sm text-cinza">{order.date}</div>
-            </div>
-            <span className="rounded-full bg-liberado-light px-3 py-1 text-xs font-semibold text-liberado-dark">
-              {order.status}
-            </span>
-          </div>
+        {orders.map((order) => (
+          <OrderHistoryCard key={order.id} order={order} to={`/pedidos/${order.id}`} />
         ))}
       </div>
+
+      {scope === 'history' && orders.length > 0 ? (
+        <p className="mt-6 text-center text-sm text-cinza">
+          Pedidos concluídos ou cancelados aparecem aqui.
+        </p>
+      ) : null}
     </div>
   );
 }

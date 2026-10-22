@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
+import { LegalDocumentLink } from '../legal/LegalDocumentLink';
 import { useAuth } from '../../hooks/useAuth';
 import { useAuthReturnTo } from '../../hooks/useAuthReturnTo';
 import {
@@ -139,14 +140,8 @@ export function RegisterForm() {
           className="mt-1 h-4 w-4 rounded border-nuvem accent-pull"
         />
         <span>
-          Li e aceito os{' '}
-          <Link to="/faq" className="font-semibold text-voo hover:text-voo-dark">
-            Termos de Uso
-          </Link>{' '}
-          e a{' '}
-          <Link to="/faq" className="font-semibold text-voo hover:text-voo-dark">
-            Política de Privacidade
-          </Link>
+          Li e aceito os <LegalDocumentLink documentId="termos" /> e a{' '}
+          <LegalDocumentLink documentId="privacidade" />
         </span>
       </label>
       {termsError ? <span className="text-xs text-error">{termsError}</span> : null}

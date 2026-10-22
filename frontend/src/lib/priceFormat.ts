@@ -1,0 +1,3 @@
+export function formatPrice(value: number): string {
+  return `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+}

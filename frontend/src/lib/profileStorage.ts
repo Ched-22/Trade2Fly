@@ -1,8 +1,7 @@
+import { apiGet, apiPatch } from './api';
 import type { AuthUser } from '../context/AuthContext';
 import type { ProfileData } from '../types/profile';
 import { emptyProfile } from '../types/profile';
-
-const profileKey = (userId: string) => `t2f_mock_profile_${userId}`;
 
 export function deriveDisplayName(firstName: string, lastName: string): string {
   const first = firstName.trim();
@@ -19,6 +18,18 @@ export function deriveInitials(firstName: string, lastName: string): string {
   return combined || '??';
 }
 
+type UserProfileResponse = {
+  displayName: string;
+  initials: string;
+  firstName: string | null;
+  lastName: string | null;
+  bio: string | null;
+  city: string | null;
+  dropzone: string | null;
+  phone: string | null;
+  avatarUrl: string | null;
+};
+
 function parseNameFromDisplayName(displayName: string): { firstName: string; lastName: string } {
   const parts = displayName.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return { firstName: '', lastName: '' };
@@ -26,25 +37,32 @@ function parseNameFromDisplayName(displayName: string): { firstName: string; las
   return { firstName: parts[0], lastName: parts.slice(1).join(' ') };
 }
 
-export function getProfile(userId: string, user?: Pick<AuthUser, 'displayName'>): ProfileData {
-  try {
-    const raw = localStorage.getItem(profileKey(userId));
-    if (raw) {
-      const parsed = JSON.parse(raw) as ProfileData;
-      return { ...emptyProfile(), ...parsed };
-    }
-  } catch {
-    // ignore corrupt storage
-  }
+function toProfileData(res: UserProfileResponse): ProfileData {
+  const fallback =
+    !res.firstName?.trim() && !res.lastName?.trim()
+      ? parseNameFromDisplayName(res.displayName ?? '')
+      : { firstName: '', lastName: '' };
+  return {
+    firstName: res.firstName?.trim() ? res.firstName : fallback.firstName,
+    lastName: res.lastName?.trim() ? res.lastName : fallback.lastName,
+    displayName: res.displayName ?? '',
+    bio: res.bio ?? '',
+    city: res.city ?? '',
+    dropzone: res.dropzone ?? '',
+    phone: res.phone ?? '',
+    avatarUrl: res.avatarUrl,
+  };
+}
 
-  const base = emptyProfile();
-  if (user?.displayName) {
-    const { firstName, lastName } = parseNameFromDisplayName(user.displayName);
-    base.firstName = firstName;
-    base.lastName = lastName;
-    base.displayName = user.displayName;
+export async function getProfile(user?: Pick<AuthUser, 'displayName'>): Promise<ProfileData> {
+  try {
+    const res = await apiGet<UserProfileResponse>('/api/users/me');
+    return toProfileData(res);
+  } catch {
+    const base = emptyProfile();
+    if (user?.displayName) base.displayName = user.displayName;
+    return base;
   }
-  return base;
 }
 
 export type SaveProfileResult = {
@@ -52,11 +70,8 @@ export type SaveProfileResult = {
   sessionPatch: Pick<AuthUser, 'displayName' | 'initials' | 'avatarUrl'>;
 };
 
-/**
- * Single write path for profile data. Swap mock localStorage for apiPatch('/api/users/me') later.
- */
-export async function saveProfile(userId: string, data: ProfileData): Promise<SaveProfileResult> {
-  const profile: ProfileData = {
+export async function saveProfile(data: ProfileData): Promise<SaveProfileResult> {
+  const trimmed: ProfileData = {
     ...data,
     firstName: data.firstName.trim(),
     lastName: data.lastName.trim(),
@@ -67,17 +82,19 @@ export async function saveProfile(userId: string, data: ProfileData): Promise<Sa
     dropzone: data.dropzone.trim(),
   };
 
-  localStorage.setItem(profileKey(userId), JSON.stringify(profile));
+  const res = await apiPatch<UserProfileResponse>('/api/users/me', {
+    firstName: trimmed.firstName,
+    lastName: trimmed.lastName,
+    displayName: trimmed.displayName,
+    bio: trimmed.bio,
+    city: trimmed.city,
+    dropzone: trimmed.dropzone,
+    phone: trimmed.phone,
+    avatarUrl: trimmed.avatarUrl ?? undefined,
+  });
 
-  const sessionPatch = {
-    displayName: profile.displayName,
-    initials: deriveInitials(profile.firstName, profile.lastName),
-    avatarUrl: profile.avatarUrl,
+  return {
+    profile: toProfileData(res),
+    sessionPatch: { displayName: res.displayName, initials: res.initials, avatarUrl: res.avatarUrl },
   };
-
-  return { profile, sessionPatch };
-}
-
-export function getAvatarUrl(userId: string): string | null {
-  return getProfile(userId).avatarUrl;
 }

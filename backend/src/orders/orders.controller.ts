@@ -1,8 +1,9 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Post, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseIntPipe, Post, Query, Request, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
+import { OrderScopeQueryDto } from './dto/order-scope-query.dto';
 
 @ApiTags('orders')
 @ApiBearerAuth()
@@ -17,8 +18,8 @@ export class OrdersController {
   }
 
   @Get()
-  findAll(@Request() req: any) {
-    return this.ordersService.findAll(req.user.id);
+  findAll(@Request() req: any, @Query() query: OrderScopeQueryDto) {
+    return this.ordersService.findAll(req.user.id, query.scope);
   }
 
   @Get(':id')

@@ -1,6 +1,15 @@
 import { getFieldsForCategory } from '../data/listingFieldConfig';
 import type { ListingFormState } from '../types/listingForm';
 
+import { isValidCep } from './shippingEstimate';
+
+export function validatePostalCode(value: string): string | null {
+  if (!isValidCep(value)) {
+    return 'Informe um CEP válido com 8 dígitos.';
+  }
+  return null;
+}
+
 export type ListingFormErrors = Partial<Record<keyof ListingFormState | 'submit', string>>;
 
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -54,6 +63,11 @@ export function validateListingForm(form: ListingFormState): ListingFormErrors {
   const price = Number(form.priceNum);
   if (!form.priceNum.trim() || Number.isNaN(price) || price < 100) {
     errors.priceNum = 'Informe um preço válido (mínimo R$ 100).';
+  }
+
+  const postalCodeError = validatePostalCode(form.postalCode);
+  if (postalCodeError) {
+    errors.postalCode = postalCodeError;
   }
 
   if (!form.location.trim()) {

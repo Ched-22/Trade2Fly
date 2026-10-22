@@ -3,11 +3,13 @@ const TOKEN_KEY = 't2f_token';
 
 export class ApiError extends Error {
   status: number;
+  code?: string;
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, code?: string) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
+    this.code = code;
   }
 }
 
@@ -31,7 +33,7 @@ function authHeaders(): Record<string, string> {
 async function parseResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const body = await response.json().catch(() => ({ message: response.statusText }));
-    throw new ApiError(body?.message ?? response.statusText, response.status);
+    throw new ApiError(body?.message ?? response.statusText, response.status, body?.code);
   }
   return response.json() as Promise<T>;
 }

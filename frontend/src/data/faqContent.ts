@@ -1,5 +1,7 @@
+import { PLATFORM_FEE_PERCENT } from '../lib/platformFee';
+
 export const SUPPORT_EMAIL = 'suporte@trade2fly.com.br';
-export const PLATFORM_FEE_PERCENT = 5;
+export { PLATFORM_FEE_PERCENT };
 
 export type FaqItem = {
   id: string;
@@ -39,7 +41,7 @@ export const faqSections: FaqSection[] = [
       {
         id: 'escrow-fees',
         question: 'Quais taxas são cobradas no escrow?',
-        answer: `A Trade2Fly cobra uma taxa de serviço de ${PLATFORM_FEE_PERCENT}% sobre o valor da transação, deduzida na liberação ao vendedor. Taxas de processamento do meio de pagamento (cartão, PIX etc.) podem se aplicar conforme o método escolhido no checkout.`,
+        answer: `A Trade2Fly cobra comissão de ${PLATFORM_FEE_PERCENT}% sobre o valor da transação, deduzida na liberação ao vendedor. A primeira venda concluída de cada vendedor é isenta dessa comissão. Frete, seguro frete e taxas de processamento do meio de pagamento (cartão, PIX etc.) podem se aplicar conforme o método escolhido no checkout.`,
       },
       {
         id: 'escrow-dispute',
@@ -145,7 +147,7 @@ export const faqSections: FaqSection[] = [
         id: 'sell-price',
         question: 'Como definir o preço do equipamento?',
         answer:
-          'Pesquise anúncios similares na plataforma e use a calculadora de valor em Ferramentas. Considere estado, histórico de manutenção e demanda da categoria.',
+          'Pesquise anúncios similares na plataforma. Considere estado, histórico de manutenção e demanda da categoria.',
       },
       {
         id: 'sell-edit',
@@ -186,7 +188,7 @@ export const faqSections: FaqSection[] = [
       {
         id: 'fees-platform',
         question: 'Quais taxas a Trade2Fly cobra?',
-        answer: `Taxa de serviço de ${PLATFORM_FEE_PERCENT}% sobre o valor da venda em transações com custódia (escrow).`,
+        answer: `Comissão de ${PLATFORM_FEE_PERCENT}% sobre o valor da venda em transações com custódia, isenta na primeira venda concluída do vendedor.`,
       },
       {
         id: 'fees-payout',
@@ -222,24 +224,6 @@ export const faqSections: FaqSection[] = [
         question: 'Devo levar o equipamento a um rigger antes de usar?',
         answer:
           'Sim, é altamente recomendado — especialmente para velames, reservas e containers. Um rigger certificado pode verificar estado, linhas, pilot chute e documentação antes do primeiro salto com o equipamento comprado.',
-      },
-    ],
-  },
-  {
-    id: 'tools',
-    title: 'Ferramentas e recursos',
-    items: [
-      {
-        id: 'tools-what',
-        question: 'O que são as ferramentas para skydivers?',
-        answer:
-          'São calculadoras e guias gratuitos no menu Ferramentas: wingloading, guia de harness, guia de container e calculadora de valor de equipamento.',
-      },
-      {
-        id: 'tools-wingloading',
-        question: 'Para que serve a calculadora de wingloading?',
-        answer:
-          'Ela estima a carga alar (wingloading) com base no peso do skydiver e na área do velame, ajudando a avaliar se um tamanho de paraquedas é adequado ao seu perfil.',
       },
     ],
   },

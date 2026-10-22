@@ -4,9 +4,9 @@ import { Header } from './Header';
 
 export function AppShell() {
   return (
-    <div className="flex min-h-screen flex-col bg-white">
+    <div className="flex min-h-screen w-full flex-col bg-white">
       <Header />
-      <main className="flex-1">
+      <main className="min-w-0 flex-1">
         <Outlet />
       </main>
       <Footer />

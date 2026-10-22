@@ -1,6 +1,11 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '../ui/Button';
+import { SellerPlatformFeeNotice } from './SellerPlatformFeeNotice';
+import { PLATFORM_FEE_PERCENT } from '../../lib/platformFee';
 import { cn } from '../../lib/cn';
+import { getPayoutStatus } from '../../lib/sellerAsaasApi';
+import { AuthAlert } from '../auth/AuthAlert';
 
 type DraftRestoreBannerProps = {
   onRestore: () => void;
@@ -32,9 +37,28 @@ const linkButtonClass =
 type ListingSuccessViewProps = {
   title: string;
   listingId: number;
+  firstSaleExempt?: boolean;
 };
 
-export function ListingSuccessView({ title, listingId }: ListingSuccessViewProps) {
+export function ListingSuccessView({
+  title,
+  listingId,
+  firstSaleExempt = false,
+}: ListingSuccessViewProps) {
+  const [needsPayoutSetup, setNeedsPayoutSetup] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    getPayoutStatus()
+      .then((result) => {
+        if (!cancelled) setNeedsPayoutSetup(!result.hasPixKey);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <div className="t2f-page max-w-2xl text-center">
       <div className="mb-4 text-5xl">🪂</div>
@@ -42,9 +66,24 @@ export function ListingSuccessView({ title, listingId }: ListingSuccessViewProps
       <p className="mb-2 text-cinza">
         <strong className="text-solo">{title}</strong> já está visível para a comunidade Trade2Fly.
       </p>
-      <p className="mb-8 text-sm text-cinza">
-        As fotos ficam salvas apenas neste dispositivo até a publicação de mídia no servidor.
+      <p className="mb-6 text-sm text-cinza">
+        {firstSaleExempt
+          ? `Sua primeira venda concluída é isenta da comissão Trade2Fly. A partir da segunda, deduzimos ${PLATFORM_FEE_PERCENT}% na liberação do pagamento. Frete e seguro frete não entram nessa isenção.`
+          : `Na conclusão da venda, a Trade2Fly deduz ${PLATFORM_FEE_PERCENT}% de comissão antes de liberar o pagamento a você.`}
       </p>
+      {needsPayoutSetup ? (
+        <div className="mb-6 text-left">
+          <AuthAlert variant="info">
+            Você ainda não configurou sua conta de recebimento — sem isso, ninguém consegue comprar seus anúncios.{' '}
+            <Link to="/perfil/recebimento" className="font-semibold underline">
+              Configurar agora
+            </Link>
+          </AuthAlert>
+        </div>
+      ) : null}
+      <div className="mb-8">
+        <SellerPlatformFeeNotice firstSaleExempt={firstSaleExempt} />
+      </div>
       <div className="flex flex-wrap justify-center gap-3">
         <Link
           to={`/anuncio/${listingId}`}

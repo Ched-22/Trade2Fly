@@ -7,11 +7,8 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { initialChatMessages, chatThreads as seedChatThreads } from '../data/mockChat';
-import { formatPrice } from '../data/mockListings';
 import { transformListingFromApi, type ListingApiRaw } from '../lib/listingTransform';
 import { apiGet, apiPost, getToken } from '../lib/api';
-import type { ChatMessage, ChatThreadMeta } from '../types/chat';
 import { defaultFilters, type Filters, type Listing } from '../types/listing';
 import { useAuthContext } from './AuthContext';
 
@@ -25,14 +22,6 @@ type MarketplaceContextValue = {
   favorites: Record<number, boolean>;
   toggleFavorite: (id: number) => void;
   favCount: number;
-  chatIdx: number;
-  setChatIdx: (idx: number) => void;
-  chatMsgs: Record<number, ChatMessage[]>;
-  chatDraft: string;
-  setChatDraft: (draft: string) => void;
-  appendMessage: () => void;
-  sendOffer: (listing: Listing, offerAmount: number, message: string) => number;
-  chatThreads: ChatThreadMeta[];
   filteredListings: Listing[];
   allListings: Listing[];
   listingsLoading: boolean;
@@ -93,10 +82,6 @@ export function MarketplaceProvider({ children }: { children: ReactNode }) {
   const [query, setQuery] = useState('');
   const [filters, setFilters] = useState<Filters>(defaultFilters);
   const [favorites, setFavorites] = useState<Record<number, boolean>>({});
-  const [chatThreads, setChatThreads] = useState<ChatThreadMeta[]>(seedChatThreads);
-  const [chatIdx, setChatIdx] = useState(0);
-  const [chatMsgs, setChatMsgs] = useState(initialChatMessages);
-  const [chatDraft, setChatDraft] = useState('');
   const [selectedListingId, setSelectedListingId] = useState<number | null>(1);
   const [checkoutListingId, setCheckoutListingId] = useState<number | null>(null);
 
@@ -184,48 +169,6 @@ export function MarketplaceProvider({ children }: { children: ReactNode }) {
     );
   }, [loadFavorites]);
 
-  const appendMessage = useCallback(() => {
-    const draft = chatDraft.trim();
-    if (!draft) return;
-    setChatMsgs((current) => ({
-      ...current,
-      [chatIdx]: [...(current[chatIdx] ?? []), { me: true, text: draft }],
-    }));
-    setChatDraft('');
-  }, [chatDraft, chatIdx]);
-
-  const sendOffer = useCallback(
-    (listing: Listing, offerAmount: number, message: string): number => {
-      let threadIdx = chatThreads.findIndex(
-        (thread) => thread.name === listing.seller || thread.item === listing.title,
-      );
-
-      if (threadIdx === -1) {
-        threadIdx = chatThreads.length;
-        const newThread: ChatThreadMeta = {
-          name: listing.seller,
-          item: listing.title,
-          price: listing.price,
-          time: 'Agora',
-          grad: listing.grad,
-        };
-        setChatThreads((current) => [...current, newThread]);
-        setChatMsgs((current) => ({ ...current, [threadIdx]: [] }));
-      }
-
-      const offerLine = `💰 Nova oferta: ${formatPrice(offerAmount)}`;
-      const offerText = message ? `${offerLine}\n\n${message}` : offerLine;
-
-      setChatMsgs((current) => ({
-        ...current,
-        [threadIdx]: [...(current[threadIdx] ?? []), { me: true, text: offerText }],
-      }));
-      setChatIdx(threadIdx);
-      return threadIdx;
-    },
-    [chatThreads],
-  );
-
   const filteredListings = useMemo(
     () => applyFilters(allListings, query, filters),
     [allListings, query, filters],
@@ -244,14 +187,6 @@ export function MarketplaceProvider({ children }: { children: ReactNode }) {
       favorites,
       toggleFavorite,
       favCount,
-      chatIdx,
-      setChatIdx,
-      chatMsgs,
-      chatDraft,
-      setChatDraft,
-      appendMessage,
-      sendOffer,
-      chatThreads,
       filteredListings,
       allListings,
       listingsLoading,
@@ -271,12 +206,6 @@ export function MarketplaceProvider({ children }: { children: ReactNode }) {
       favorites,
       toggleFavorite,
       favCount,
-      chatIdx,
-      chatMsgs,
-      chatDraft,
-      appendMessage,
-      sendOffer,
-      chatThreads,
       filteredListings,
       allListings,
       listingsLoading,

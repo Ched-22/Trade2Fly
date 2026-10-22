@@ -1,4 +1,5 @@
-import { IsBoolean, IsIn, IsNotEmpty, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { Equals, IsBoolean, IsIn, IsNotEmpty, IsNumber, IsOptional, IsString, Matches, Min } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateListingDto {
@@ -58,6 +59,12 @@ export class CreateListingDto {
   @IsString()
   location: string;
 
+  @ApiProperty({ description: 'CEP de origem do envio com 8 dígitos' })
+  @Transform(({ value }) => String(value ?? '').replace(/\D/g, ''))
+  @IsString()
+  @Matches(/^\d{8}$/, { message: 'Informe um CEP válido com 8 dígitos.' })
+  postalCode: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsBoolean()
@@ -67,4 +74,11 @@ export class CreateListingDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @ApiProperty({
+    description: 'Confirmação de aceite dos termos do vendedor e taxas da plataforma',
+  })
+  @IsBoolean()
+  @Equals(true, { message: 'É necessário aceitar os termos para publicar o anúncio.' })
+  acceptedSellerTerms: boolean;
 }

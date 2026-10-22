@@ -19,9 +19,10 @@ export function ProfileContactPage() {
 
   const load = useCallback(() => {
     if (!user) return;
-    const profile = getProfile(user.id, user);
-    setFullProfile(profile);
-    setForm({ phone: profile.phone, city: profile.city, dropzone: profile.dropzone });
+    void getProfile(user).then((profile) => {
+      setFullProfile(profile);
+      setForm({ phone: profile.phone, city: profile.city, dropzone: profile.dropzone });
+    });
   }, [user]);
 
   useEffect(() => {

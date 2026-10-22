@@ -2,25 +2,43 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AuthAlert } from '../components/auth/AuthAlert';
 import { Button } from '../components/ui/Button';
-import { ListingTile } from '../components/ui/ListingTile';
-import { apiGet } from '../lib/api';
-import { transformListingFromApi, type ListingApiRaw } from '../lib/listingTransform';
+import { ScopeTabs } from '../components/ui/ScopeTabs';
+import { MyListingCard } from '../components/sell/MyListingCard';
+import { SellerPlatformFeeNotice } from '../components/sell/SellerPlatformFeeNotice';
+import { getMyListings, type MyListingsFilter } from '../lib/myListingsApi';
+import { getSellerCommissionInfo } from '../lib/sellerSalesApi';
 import { useAuth } from '../hooks/useAuth';
 import type { Listing } from '../types/listing';
 
 export function MyListingsPage() {
   const { user } = useAuth();
+  const [filter, setFilter] = useState<MyListingsFilter>('true');
   const [myListings, setMyListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [firstSaleExempt, setFirstSaleExempt] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    getSellerCommissionInfo()
+      .then((info) => {
+        if (!cancelled) setFirstSaleExempt(info.firstSaleExempt);
+      })
+      .catch(() => {
+        if (!cancelled) setFirstSaleExempt(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    apiGet<ListingApiRaw[]>('/api/listings/me/listings')
+    getMyListings(filter)
       .then((data) => {
         if (!cancelled) {
-          setMyListings(data.map(transformListingFromApi));
+          setMyListings(data);
           setError(null);
         }
       })
@@ -36,7 +54,16 @@ export function MyListingsPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [filter]);
+
+  const countLabel =
+    filter === 'true'
+      ? myListings.length === 1
+        ? 'anúncio ativo ou em venda'
+        : 'anúncios ativos ou em venda'
+      : myListings.length === 1
+        ? 'anúncio no histórico'
+        : 'anúncios no histórico';
 
   return (
     <div className="t2f-page max-w-7xl">
@@ -46,16 +73,31 @@ export function MyListingsPage() {
             Meus anúncios
           </h1>
           <p className="text-cinza">
-            {loading
-              ? 'Carregando…'
-              : `${myListings.length} ${myListings.length === 1 ? 'anúncio ativo' : 'anúncios ativos'}`}{' '}
-            · {user?.displayName}
+            {loading ? 'Carregando…' : `${myListings.length} ${countLabel}`} · {user?.displayName}
           </p>
         </div>
-        <Link to="/vender" className="w-full sm:w-auto">
-          <Button className="w-full sm:w-auto">Publicar anúncio</Button>
-        </Link>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+          <Link to="/vender" className="w-full sm:w-auto">
+            <Button className="w-full sm:w-auto">Publicar anúncio</Button>
+          </Link>
+          <Link to="/vendas" className="w-full sm:w-auto">
+            <Button variant="secondary" className="w-full sm:w-auto">
+              Painel de vendas
+            </Button>
+          </Link>
+        </div>
       </div>
+
+      <ScopeTabs
+        value={filter}
+        onChange={setFilter}
+        options={[
+          { value: 'true', label: 'Ativos / em venda' },
+          { value: 'false', label: 'Histórico' },
+        ]}
+      />
+
+      <SellerPlatformFeeNotice className="mb-6" firstSaleExempt={firstSaleExempt} />
 
       {error ? (
         <div className="mb-6">
@@ -67,15 +109,21 @@ export function MyListingsPage() {
         <p className="text-cinza">Carregando anúncios…</p>
       ) : myListings.length === 0 ? (
         <div className="rounded-xl border border-nuvem bg-white p-8 text-center">
-          <p className="mb-4 text-cinza">Você ainda não publicou nenhum anúncio.</p>
-          <Link to="/vender">
-            <Button>Publicar primeiro anúncio</Button>
-          </Link>
+          <p className="mb-4 text-cinza">
+            {filter === 'true'
+              ? 'Você ainda não publicou nenhum anúncio.'
+              : 'Nenhum anúncio encerrado no histórico.'}
+          </p>
+          {filter === 'true' ? (
+            <Link to="/vender">
+              <Button>Publicar primeiro anúncio</Button>
+            </Link>
+          ) : null}
         </div>
       ) : (
-        <div className="t2f-grid">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {myListings.map((listing) => (
-            <ListingTile key={listing.id} listing={listing} />
+            <MyListingCard key={listing.id} listing={listing} />
           ))}
         </div>
       )}

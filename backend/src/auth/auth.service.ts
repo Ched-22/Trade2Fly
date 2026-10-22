@@ -9,6 +9,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
+import { UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -33,8 +34,8 @@ export class AuthService {
     private readonly config: ConfigService,
   ) {}
 
-  private signToken(userId: string, email: string) {
-    return this.jwt.sign({ sub: userId, email });
+  private signToken(userId: string, email: string, role: UserRole) {
+    return this.jwt.sign({ sub: userId, email, role });
   }
 
   private userResponse(user: {
@@ -43,6 +44,8 @@ export class AuthService {
     displayName: string;
     initials: string;
     active: boolean;
+    role: UserRole;
+    avatarUrl?: string | null;
   }) {
     return {
       id: user.id,
@@ -50,6 +53,8 @@ export class AuthService {
       displayName: user.displayName,
       initials: user.initials,
       active: user.active,
+      role: user.role,
+      avatarUrl: user.avatarUrl ?? null,
     };
   }
 
@@ -70,7 +75,7 @@ export class AuthService {
 
     this.assertActive(user);
 
-    return { token: this.signToken(user.id, user.email), user: this.userResponse(user) };
+    return { token: this.signToken(user.id, user.email, user.role), user: this.userResponse(user) };
   }
 
   async register(dto: RegisterDto) {

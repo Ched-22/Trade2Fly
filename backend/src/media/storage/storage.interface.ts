@@ -9,4 +9,7 @@ export interface StorageDriver {
   deleteListingFolder(listingId: number): Promise<void>;
   getPublicUrl(listingId: number, filename: string): string;
   getFilePath(listingId: number, filename: string): string;
+  saveOrderFile(orderId: number, file: Express.Multer.File): Promise<SavedFile>;
+  getOrderFilePath(orderId: number, filename: string): string;
+  getOrderPublicUrl(orderId: number, filename: string): string;
 }
