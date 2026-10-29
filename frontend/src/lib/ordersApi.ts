@@ -7,6 +7,7 @@ export type OrderStatus =
   | 'shipment_in_progress'
   | 'shipped'
   | 'disputed'
+  | 'return_in_progress'
   | 'completed'
   | 'cancelled'
   | 'refunded';
@@ -41,8 +42,47 @@ export type OrderListItem = {
   };
 };
 
+export type DisputeReason = 'defect' | 'not_as_described' | 'withdrawal';
+
+export type ReturnShippingPayer = 'seller' | 'buyer';
+
+export type ReturnStatus =
+  | 'awaiting_label'
+  | 'label_issued'
+  | 'in_transit'
+  | 'received'
+  | 'refunded'
+  | 'cancelled';
+
+export type OrderReturn = {
+  status: ReturnStatus;
+  shippingPayer: ReturnShippingPayer;
+  shippingCost: number;
+  refundAmount: number;
+  sellerDebtAmount?: number;
+  trackingCode: string | null;
+  labelUrl: string | null;
+  receivedAt?: string | null;
+  refundedAt?: string | null;
+};
+
 export type OrderDetail = OrderListItem & {
   updatedAt?: string;
+  shipping?: {
+    mode: 'shipping' | 'pickup';
+    amount: number;
+    insurance: number;
+    address: {
+      zip: string | null;
+      street: string | null;
+      number: string | null;
+      complement: string | null;
+      district: string | null;
+      city: string | null;
+      state: string | null;
+    } | null;
+  };
+  return?: OrderReturn | null;
   buyer: { id: string; displayName: string };
   seller: { id: string; displayName: string };
   fulfillment: {
@@ -59,6 +99,7 @@ export type OrderDetail = OrderListItem & {
     };
     buyerDecision: 'confirm' | 'dispute' | null;
     disputeReason: string | null;
+    disputeReasonType?: DisputeReason | null;
     buyerConfirmedAt: string | null;
     disputedAt: string | null;
     autoCompleteAt: string | null;
@@ -94,6 +135,16 @@ export type CreateOrderPayload = {
   cardHolderPostalCode?: string;
   cardHolderAddressNumber?: string;
   cardHolderPhone?: string;
+  /** Frete e seguro são calculados no servidor; o cliente só informa o modo, o endereço e a opção de seguro. */
+  deliveryMode: 'shipping' | 'pickup';
+  shippingInsurance?: boolean;
+  shippingZip?: string;
+  shippingStreet?: string;
+  shippingNumber?: string;
+  shippingComplement?: string;
+  shippingDistrict?: string;
+  shippingCity?: string;
+  shippingState?: string;
 };
 
 export function createOrder(payload: CreateOrderPayload): Promise<CreateOrderResponse> {
@@ -115,13 +166,22 @@ export function submitReceiptDecision(
   orderId: number,
   decision: 'confirm' | 'dispute',
   reason?: string,
+  reasonType?: DisputeReason,
 ) {
-  return apiPost<OrderDetail>(`/api/orders/${orderId}/receipt-decision`, { decision, reason });
+  return apiPost<OrderDetail>(`/api/orders/${orderId}/receipt-decision`, {
+    decision,
+    reason,
+    reasonType,
+  });
 }
 
 export type DisputeStatus = 'awaiting_admin' | 'awaiting_buyer' | 'resolved';
 
-export type DisputeOutcome = 'buyer_satisfied' | 'refund_buyer' | 'release_seller';
+export type DisputeOutcome =
+  | 'buyer_satisfied'
+  | 'refund_buyer'
+  | 'release_seller'
+  | 'return_and_refund';
 
 export type DisputeMessage = {
   id: number;
@@ -135,9 +195,11 @@ export type OrderDispute = {
   orderId: number;
   status: DisputeStatus;
   outcome: DisputeOutcome | null;
+  reason?: DisputeReason;
   openedAt: string;
   resolvedAt: string | null;
   messages: DisputeMessage[];
+  return?: OrderReturn | null;
 };
 
 export function getOrderDispute(orderId: number): Promise<OrderDispute> {
@@ -160,6 +222,7 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   shipment_in_progress: 'Preparando envio',
   shipped: 'Despachado',
   disputed: 'Em disputa',
+  return_in_progress: 'Devolução em andamento',
   completed: 'Concluído',
   cancelled: 'Cancelado',
   refunded: 'Reembolsado',
@@ -174,3 +237,18 @@ export const PAYMENT_TYPE_LABELS: Record<string, string> = {
 export function paymentTypeLabel(paymentType: string): string {
   return PAYMENT_TYPE_LABELS[paymentType] ?? paymentType;
 }
+
+export const DISPUTE_REASON_LABELS: Record<DisputeReason, string> = {
+  defect: 'Produto com defeito',
+  not_as_described: 'Produto diferente do anunciado',
+  withdrawal: 'Desistência (sem defeito)',
+};
+
+export const RETURN_STATUS_LABELS: Record<ReturnStatus, string> = {
+  awaiting_label: 'Aguardando etiqueta de devolução',
+  label_issued: 'Etiqueta emitida — envie o produto',
+  in_transit: 'Produto em trânsito para o vendedor',
+  received: 'Devolução recebida',
+  refunded: 'Reembolsado',
+  cancelled: 'Devolução cancelada',
+};

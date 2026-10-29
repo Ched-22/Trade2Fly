@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import { PackageCheck, ShieldCheck } from 'lucide-react';
-import type { OrderDetail } from '../../lib/ordersApi';
+import {
+  DISPUTE_REASON_LABELS,
+  type DisputeReason,
+  type OrderDetail,
+} from '../../lib/ordersApi';
 import { Button } from '../ui/Button';
 import { Textarea } from '../ui/Textarea';
 import { ProofProgressSteps } from './ProofProgressSteps';
@@ -16,7 +20,7 @@ type ReceiptProofPanelProps = {
   onUpload: (kind: ReceiptProofKind, file: File) => Promise<void>;
   onDeleteFile: (fileId: number) => Promise<void>;
   onConfirm: () => Promise<void>;
-  onDispute: (reason: string) => Promise<void>;
+  onDispute: (reasonType: DisputeReason, reason: string) => Promise<void>;
 };
 
 export function ReceiptProofPanel({
@@ -31,6 +35,7 @@ export function ReceiptProofPanel({
 }: ReceiptProofPanelProps) {
   const [showDispute, setShowDispute] = useState(false);
   const [disputeReason, setDisputeReason] = useState('');
+  const [reasonType, setReasonType] = useState<DisputeReason | ''>('');
   const [disputeError, setDisputeError] = useState<string | null>(null);
 
   const receipt = order.fulfillment.receiptProof;
@@ -51,14 +56,19 @@ export function ReceiptProofPanel({
 
   const handleDisputeSubmit = async () => {
     const trimmed = disputeReason.trim();
+    if (!reasonType) {
+      setDisputeError('Selecione o tipo de problema.');
+      return;
+    }
     if (trimmed.length < 10) {
       setDisputeError('Descreva o problema com pelo menos 10 caracteres.');
       return;
     }
     setDisputeError(null);
-    await onDispute(trimmed);
+    await onDispute(reasonType, trimmed);
     setShowDispute(false);
     setDisputeReason('');
+    setReasonType('');
   };
 
   return (
@@ -144,8 +154,32 @@ export function ReceiptProofPanel({
                   eles serão analisados pela plataforma. As provas de recebimento já enviadas acima
                   entram na análise.
                 </p>
+                <label className="block text-sm font-semibold text-solo" htmlFor="dispute-type">
+                  Tipo de problema
+                </label>
+                <select
+                  id="dispute-type"
+                  value={reasonType}
+                  onChange={(event) => {
+                    setReasonType(event.target.value as DisputeReason | '');
+                    setDisputeError(null);
+                  }}
+                  className="w-full rounded-md border border-nuvem bg-white p-2.5 text-sm"
+                >
+                  <option value="">Selecione…</option>
+                  {(Object.keys(DISPUTE_REASON_LABELS) as DisputeReason[]).map((key) => (
+                    <option key={key} value={key}>
+                      {DISPUTE_REASON_LABELS[key]}
+                    </option>
+                  ))}
+                </select>
+                <p className="rounded-lg bg-bruma px-3 py-2 text-xs text-cinza">
+                  <strong>Frete de devolução:</strong> se houver defeito ou o produto for diferente do
+                  anunciado, o frete de volta é do vendedor. Em caso de desistência sem defeito, o
+                  frete de volta é descontado do seu reembolso. O prazo para contestar é de 7 dias.
+                </p>
                 <label className="block text-sm font-semibold text-solo" htmlFor="dispute-reason">
-                  Motivo da contestação
+                  Descreva o que aconteceu
                 </label>
                 <Textarea
                   id="dispute-reason"
@@ -168,6 +202,7 @@ export function ReceiptProofPanel({
                     onClick={() => {
                       setShowDispute(false);
                       setDisputeReason('');
+                      setReasonType('');
                       setDisputeError(null);
                     }}
                   >

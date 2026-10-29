@@ -1,4 +1,16 @@
-import { IsIn, IsInt, IsNumber, IsOptional, IsString, Matches, Max, Min, ValidateIf } from 'class-validator';
+import {
+  IsBoolean,
+  IsIn,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Matches,
+  Max,
+  MaxLength,
+  Min,
+  ValidateIf,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateOrderDto {
@@ -14,6 +26,56 @@ export class CreateOrderDto {
   @IsOptional()
   @IsNumber()
   amount?: number;
+
+  @ApiPropertyOptional({ enum: ['shipping', 'pickup'], description: 'Envio (frete cobrado) ou retirada em mãos' })
+  @IsOptional()
+  @IsIn(['shipping', 'pickup'])
+  deliveryMode?: 'shipping' | 'pickup';
+
+  @ApiPropertyOptional({ description: 'Contrata o seguro de frete opcional (só com envio)' })
+  @IsOptional()
+  @IsBoolean()
+  shippingInsurance?: boolean;
+
+  @ApiPropertyOptional({ description: 'CEP de entrega, 8 dígitos (obrigatório com envio)' })
+  @ValidateIf((dto) => dto.deliveryMode !== 'pickup')
+  @Matches(/^\d{8}$/, { message: 'CEP de entrega inválido' })
+  shippingZip?: string;
+
+  @ApiPropertyOptional()
+  @ValidateIf((dto) => dto.deliveryMode !== 'pickup')
+  @IsString()
+  @MaxLength(160)
+  shippingStreet?: string;
+
+  @ApiPropertyOptional()
+  @ValidateIf((dto) => dto.deliveryMode !== 'pickup')
+  @IsString()
+  @MaxLength(20)
+  shippingNumber?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  shippingComplement?: string;
+
+  @ApiPropertyOptional()
+  @ValidateIf((dto) => dto.deliveryMode !== 'pickup')
+  @IsString()
+  @MaxLength(80)
+  shippingDistrict?: string;
+
+  @ApiPropertyOptional()
+  @ValidateIf((dto) => dto.deliveryMode !== 'pickup')
+  @IsString()
+  @MaxLength(80)
+  shippingCity?: string;
+
+  @ApiPropertyOptional()
+  @ValidateIf((dto) => dto.deliveryMode !== 'pickup')
+  @Matches(/^[A-Za-z]{2}$/, { message: 'UF de entrega inválida' })
+  shippingState?: string;
 
   @ApiProperty({ description: 'CPF ou CNPJ do comprador, somente dígitos' })
   @IsString()

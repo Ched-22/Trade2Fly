@@ -42,6 +42,13 @@ function StatusGuidance({ order }: { order: OrderDetail }) {
           com uma resposta em até 48 horas úteis.
         </AuthAlert>
       );
+    case 'return_in_progress':
+      return (
+        <AuthAlert variant="info">
+          A disputa foi resolvida com a devolução do produto. Você receberá o produto de volta; o
+          reembolso ao comprador é feito após a confirmação do recebimento.
+        </AuthAlert>
+      );
     case 'refunded':
       return (
         <AuthAlert variant="info">

@@ -60,8 +60,14 @@ export class AsaasPaymentsService {
     return this.client.get<AsaasPayment>(`/payments/${paymentId}`);
   }
 
-  /** Estorna integralmente a cobrança (Pix, cartão ou boleto) via `POST /payments/{id}/refund`. */
-  async refundPayment(paymentId: string): Promise<AsaasPayment> {
-    return this.client.post<AsaasPayment>(`/payments/${paymentId}/refund`, {});
+  /**
+   * Estorna a cobrança (Pix, cartão ou boleto) via `POST /payments/{id}/refund`.
+   * Sem `value` o estorno é integral; com `value` é parcial.
+   */
+  async refundPayment(paymentId: string, value?: number): Promise<AsaasPayment> {
+    return this.client.post<AsaasPayment>(
+      `/payments/${paymentId}/refund`,
+      value === undefined ? {} : { value },
+    );
   }
 }

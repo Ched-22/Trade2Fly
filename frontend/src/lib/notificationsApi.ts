@@ -9,6 +9,8 @@ export type NotificationType =
   | 'order_disputed'
   | 'dispute_admin_replied'
   | 'dispute_buyer_replied'
+  | 'return_approved'
+  | 'return_received'
   | 'checkout_available';
 
 export type Notification = {

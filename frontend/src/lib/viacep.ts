@@ -4,12 +4,16 @@ export type ViaCepAddress = {
   cep: string;
   city: string;
   state: string;
+  street: string;
+  district: string;
 };
 
 type ViaCepResponse = {
   erro?: boolean;
   localidade?: string;
   uf?: string;
+  logradouro?: string;
+  bairro?: string;
 };
 
 export async function fetchAddressByCep(cep: string): Promise<ViaCepAddress | null> {
@@ -26,5 +30,7 @@ export async function fetchAddressByCep(cep: string): Promise<ViaCepAddress | nu
     cep: digits,
     city: data.localidade,
     state: data.uf,
+    street: data.logradouro ?? '',
+    district: data.bairro ?? '',
   };
 }

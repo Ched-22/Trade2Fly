@@ -57,6 +57,11 @@ export function CheckoutPage() {
   const [cep, setCep] = useState('');
   const [destCity, setDestCity] = useState('');
   const [destState, setDestState] = useState('');
+  const [destStreet, setDestStreet] = useState('');
+  const [destNumber, setDestNumber] = useState('');
+  const [destComplement, setDestComplement] = useState('');
+  const [destDistrict, setDestDistrict] = useState('');
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [cepLoading, setCepLoading] = useState(false);
   const [cepError, setCepError] = useState<string | null>(null);
   const [paid, setPaid] = useState(false);
@@ -238,10 +243,12 @@ export function CheckoutPage() {
       ? checkoutGrant.agreedPrice
       : (listing?.priceNum ?? 0);
   const subtotal = itemPrice;
+  // Frete e seguro são cobrados junto, mas separados do produto (fora da comissão). O juros do cartão incide sobre o total cobrado.
+  const chargeBase = subtotal + shippingInsuranceFee + shippingCost;
   const cardCharge =
-    payMethod === 'card' ? calculateCardChargeTotal(itemPrice, installments) : null;
+    payMethod === 'card' ? calculateCardChargeTotal(chargeBase, installments) : null;
   const installmentSurcharge = cardCharge?.buyerSurcharge ?? 0;
-  const total = subtotal + shippingInsuranceFee + shippingCost + installmentSurcharge;
+  const total = chargeBase + installmentSurcharge;
   const itemPriceLabel = formatPrice(itemPrice);
   const checkoutRemainingLabel =
     checkoutGrant?.expiresAt && checkoutGrantActive
@@ -265,7 +272,10 @@ export function CheckoutPage() {
       onlyDigits(cardHolderPostalCode).length === 8 &&
       cardHolderAddressNumber.trim().length > 0 &&
       onlyDigits(cardHolderPhone).length >= 10);
-  const canSubmitPayment = cpfCnpjValid && cardFieldsValid;
+  const addressValid =
+    deliveryMode === 'pickup' ||
+    (destStreet.trim().length > 0 && destNumber.trim().length > 0 && destDistrict.trim().length > 0);
+  const canSubmitPayment = cpfCnpjValid && cardFieldsValid && addressValid && termsAccepted;
 
   const handlePay = async () => {
     if (!listing || checkoutBlocked || !canSubmitPayment) return;
@@ -279,6 +289,19 @@ export function CheckoutPage() {
         paymentType: payMethod,
         amount: itemPrice,
         cpfCnpj: cpfCnpjDigits,
+        deliveryMode,
+        ...(deliveryMode === 'shipping'
+          ? {
+              shippingInsurance: shippingInsuranceOptedIn,
+              shippingZip: normalizeCep(cep),
+              shippingStreet: destStreet.trim(),
+              shippingNumber: destNumber.trim(),
+              shippingComplement: destComplement.trim() || undefined,
+              shippingDistrict: destDistrict.trim(),
+              shippingCity: destCity.trim(),
+              shippingState: destState.trim().toUpperCase(),
+            }
+          : {}),
         ...(payMethod === 'card'
           ? {
               installments,
@@ -351,6 +374,8 @@ export function CheckoutPage() {
       }
       setDestCity(address.city);
       setDestState(address.state);
+      if (address.street) setDestStreet(address.street);
+      if (address.district) setDestDistrict(address.district);
     } catch {
       setCepError('Não foi possível consultar o CEP. Tente novamente.');
     } finally {
@@ -491,6 +516,29 @@ export function CheckoutPage() {
                   onChange={(event) => setDestState(event.target.value.toUpperCase().slice(0, 2))}
                   placeholder="SP"
                   maxLength={2}
+                />
+                <Input
+                  label="Rua / logradouro"
+                  value={destStreet}
+                  onChange={(event) => setDestStreet(event.target.value)}
+                  placeholder="Rua, avenida…"
+                />
+                <Input
+                  label="Número"
+                  value={destNumber}
+                  onChange={(event) => setDestNumber(event.target.value)}
+                  placeholder="123"
+                />
+                <Input
+                  label="Bairro"
+                  value={destDistrict}
+                  onChange={(event) => setDestDistrict(event.target.value)}
+                />
+                <Input
+                  label="Complemento (opcional)"
+                  value={destComplement}
+                  onChange={(event) => setDestComplement(event.target.value)}
+                  placeholder="Apto, bloco…"
                 />
                 <div className="flex items-end">
                   <p className="text-xs text-cinza">
@@ -692,8 +740,7 @@ export function CheckoutPage() {
                         className="h-11 w-full rounded-md border border-nuvem bg-white px-3.5 text-[0.95rem] text-solo outline-none focus:ring-3 focus:ring-voo/30"
                       >
                         {Array.from({ length: 12 }, (_, index) => index + 1).map((n) => {
-                          const optionCharge = calculateCardChargeTotal(itemPrice, n).chargeAmount;
-                          const optionTotal = optionCharge + shippingInsuranceFee + shippingCost;
+                          const optionTotal = calculateCardChargeTotal(chargeBase, n).chargeAmount;
                           const installmentValue = Math.round((optionTotal / n) * 100) / 100;
                           return (
                             <option key={n} value={n}>
@@ -819,6 +866,22 @@ export function CheckoutPage() {
             </div>
           ) : payError ? (
             <p className="mt-3 text-sm text-pull">{payError}</p>
+          ) : null}
+          {!paymentResult || paymentResult.status !== 'awaiting_payment' ? (
+            <label className="mt-4 flex items-start gap-2 text-xs leading-relaxed text-cinza">
+              <input
+                type="checkbox"
+                checked={termsAccepted}
+                onChange={(event) => setTermsAccepted(event.target.checked)}
+                className="mt-0.5"
+              />
+              <span>
+                Li e aceito a <strong>política de devolução</strong>: tenho 7 dias após receber para
+                contestar. Em caso de defeito ou produto diferente do anunciado, o frete de volta é do
+                vendedor; em caso de desistência sem defeito, o frete de volta é descontado do meu
+                reembolso. O frete de ida não é reembolsado em caso de desistência.
+              </span>
+            </label>
           ) : null}
           {!paymentResult || paymentResult.status !== 'awaiting_payment' ? (
             <Button

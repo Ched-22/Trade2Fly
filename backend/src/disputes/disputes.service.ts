@@ -12,6 +12,8 @@ import {
   NotificationType,
   OrderStatus,
   Prisma,
+  ReturnShippingPayer,
+  ReturnStatus,
 } from '@prisma/client';
 import { paginatedResponse, resolvePagination } from '../admin/dto/admin-pagination.dto';
 import { FulfillmentService } from '../fulfillment/fulfillment.service';
@@ -20,10 +22,13 @@ import { AsaasPaymentsService } from '../payments/asaas/asaas-payments.service';
 import { PrismaService } from '../prisma/prisma.service';
 import type { AdminDisputesQueryDto } from './dto/admin-dispute.dto';
 
+const round2 = (value: number) => Math.round(value * 100) / 100;
+
 const disputeInclude = {
   messages: { orderBy: { createdAt: 'asc' } },
   order: {
     include: {
+      orderReturn: true,
       buyer: { select: { id: true, displayName: true, email: true } },
       listing: {
         select: {
@@ -58,15 +63,32 @@ export class DisputesService {
     }));
   }
 
+  private formatReturn(orderReturn: DisputeWithRelations['order']['orderReturn']) {
+    if (!orderReturn) return null;
+    return {
+      status: orderReturn.status,
+      shippingPayer: orderReturn.shippingPayer,
+      shippingCost: orderReturn.shippingCost,
+      refundAmount: orderReturn.refundAmount,
+      sellerDebtAmount: orderReturn.sellerDebtAmount,
+      trackingCode: orderReturn.trackingCode,
+      labelUrl: orderReturn.labelUrl,
+      receivedAt: orderReturn.receivedAt?.toISOString() ?? null,
+      refundedAt: orderReturn.refundedAt?.toISOString() ?? null,
+    };
+  }
+
   private formatDispute(dispute: DisputeWithRelations) {
     return {
       id: dispute.id,
       orderId: dispute.orderId,
       status: dispute.status,
       outcome: dispute.outcome,
+      reason: dispute.reason,
       openedAt: dispute.openedAt.toISOString(),
       resolvedAt: dispute.resolvedAt?.toISOString() ?? null,
       messages: this.formatMessages(dispute),
+      return: this.formatReturn(dispute.order.orderReturn),
     };
   }
 
@@ -193,6 +215,7 @@ export class DisputesService {
       orderId: row.orderId,
       status: row.status,
       outcome: row.outcome,
+      reason: row.reason,
       openedAt: row.openedAt.toISOString(),
       lastBuyerMessageAt: row.lastBuyerMessageAt.toISOString(),
       resolvedAt: row.resolvedAt?.toISOString() ?? null,
@@ -219,6 +242,10 @@ export class DisputesService {
         status: dispute.order.status,
         escrowStatus: dispute.order.escrowStatus,
         amount: dispute.order.amount,
+        chargeAmount: dispute.order.chargeAmount,
+        shippingAmount: dispute.order.shippingAmount,
+        shippingInsurance: dispute.order.shippingInsurance,
+        deliveryMode: dispute.order.deliveryMode,
         listingTitle: dispute.order.listing.title,
         buyer: dispute.order.buyer,
         seller: dispute.order.listing.seller,
@@ -268,8 +295,9 @@ export class DisputesService {
   async adminResolve(
     adminId: string,
     orderId: number,
-    outcome: 'refund_buyer' | 'release_seller',
+    outcome: 'refund_buyer' | 'release_seller' | 'return_and_refund',
     note: string,
+    shippingPayerInput?: 'seller' | 'buyer',
   ) {
     const dispute = await this.loadByOrderId(orderId);
     if (dispute.status === DisputeStatus.resolved || dispute.order.status !== OrderStatus.disputed) {
@@ -277,6 +305,10 @@ export class DisputesService {
         code: 'DISPUTE_ALREADY_RESOLVED',
         message: 'Esta disputa já foi encerrada.',
       });
+    }
+
+    if (outcome === 'return_and_refund') {
+      return this.approveReturn(adminId, dispute, note, shippingPayerInput);
     }
 
     if (outcome === 'refund_buyer') {
@@ -349,6 +381,241 @@ export class DisputesService {
       // Conclui o pedido (notifica as duas partes e libera o escrow ao vendedor).
       await this.fulfillmentService.completeOrder(orderId);
     }
+
+    return this.adminGetByOrder(orderId);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Devolução (desfecho `return_and_refund`)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Aprova a devolução: o produto volta e o reembolso só sai quando o admin confirma o recebimento.
+   * O frete de volta é estimado pelo frete de ida (trocado pelo preço real da etiqueta da Loggi depois).
+   */
+  private async approveReturn(
+    adminId: string,
+    dispute: DisputeWithRelations,
+    note: string,
+    shippingPayerInput?: 'seller' | 'buyer',
+  ) {
+    const { order } = dispute;
+    if (!order.asaasPaymentId) {
+      throw new BadRequestException({
+        code: 'ORDER_WITHOUT_ASAAS_PAYMENT',
+        message: 'Pedido sem cobrança na Asaas: o reembolso precisa ser feito manualmente.',
+      });
+    }
+
+    const shippingPayer: ReturnShippingPayer =
+      shippingPayerInput ?? (dispute.reason === 'withdrawal' ? 'buyer' : 'seller');
+    const shippingCost = round2(order.shippingAmount);
+
+    // Comprador paga: recebe o preço do produto menos o frete de volta (frete de ida, seguro e juros do cartão não voltam).
+    // Vendedor paga: estorno integral; o frete de volta vira débito do vendedor (cobrança em aberto).
+    const refundAmount =
+      shippingPayer === 'buyer'
+        ? round2(order.amount - shippingCost)
+        : round2(order.chargeAmount ?? order.amount + order.shippingAmount + order.shippingInsurance);
+    if (refundAmount <= 0) {
+      throw new BadRequestException({
+        code: 'RETURN_REFUND_NOT_POSITIVE',
+        message: 'O frete de volta é maior que o valor do produto. Revise quem arca com o frete.',
+      });
+    }
+
+    const claimed = await this.prisma.orderDispute.updateMany({
+      where: {
+        id: dispute.id,
+        status: { in: [DisputeStatus.awaiting_admin, DisputeStatus.awaiting_buyer] },
+      },
+      data: {
+        status: DisputeStatus.resolved,
+        outcome: DisputeOutcome.return_and_refund,
+        resolvedAt: new Date(),
+        resolvedByAdminId: adminId,
+      },
+    });
+    if (claimed.count === 0) {
+      throw new ConflictException({
+        code: 'DISPUTE_ALREADY_RESOLVED',
+        message: 'Esta disputa já foi encerrada.',
+      });
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.orderReturn.create({
+        data: {
+          orderId: order.id,
+          shippingPayer,
+          shippingCost,
+          refundAmount,
+          sellerDebtAmount: shippingPayer === 'seller' ? shippingCost : 0,
+          approvedByAdminId: adminId,
+        },
+      }),
+      this.prisma.order.update({
+        where: { id: order.id },
+        data: { status: OrderStatus.return_in_progress, autoCompleteAt: null },
+      }),
+      this.prisma.disputeMessage.create({
+        data: {
+          disputeId: dispute.id,
+          authorType: DisputeAuthorType.admin,
+          authorId: adminId,
+          body: note.trim(),
+        },
+      }),
+    ]);
+
+    const title = order.listing.title;
+    const payerText =
+      shippingPayer === 'buyer'
+        ? 'O frete de volta será descontado do reembolso.'
+        : 'O frete de volta fica por conta do vendedor.';
+    await this.notificationsService.create({
+      userId: order.buyerId,
+      type: NotificationType.return_approved,
+      title: 'Devolução aprovada',
+      body: `Sua disputa sobre "${title}" foi aprovada: devolva o produto com a etiqueta que enviaremos. ${payerText}`,
+      orderId: order.id,
+      listingId: order.listingId,
+    });
+    await this.notificationsService.create({
+      userId: order.listing.sellerId,
+      type: NotificationType.return_approved,
+      title: 'Devolução aprovada',
+      body: `A disputa sobre "${title}" foi resolvida com devolução do produto. ${payerText}`,
+      orderId: order.id,
+      listingId: order.listingId,
+    });
+
+    return this.adminGetByOrder(order.id);
+  }
+
+  private async loadReturn(orderId: number) {
+    const orderReturn = await this.prisma.orderReturn.findUnique({ where: { orderId } });
+    if (!orderReturn) {
+      throw new NotFoundException({ code: 'RETURN_NOT_FOUND', message: 'Devolução não encontrada.' });
+    }
+    return orderReturn;
+  }
+
+  /** Registra rastreio/etiqueta da devolução (manual até a integração com a Loggi gerar a etiqueta reversa). */
+  async adminSetReturnLabel(orderId: number, trackingCode?: string, labelUrl?: string) {
+    const code = trackingCode?.trim();
+    const url = labelUrl?.trim();
+    if (!code && !url) {
+      throw new BadRequestException({
+        code: 'RETURN_LABEL_REQUIRED',
+        message: 'Informe o código de rastreio ou o link da etiqueta.',
+      });
+    }
+    const orderReturn = await this.loadReturn(orderId);
+    if (
+      orderReturn.status !== ReturnStatus.awaiting_label &&
+      orderReturn.status !== ReturnStatus.label_issued
+    ) {
+      throw new ConflictException({
+        code: 'INVALID_RETURN_STATUS',
+        message: 'A etiqueta só pode ser registrada antes do envio do produto.',
+      });
+    }
+    await this.prisma.orderReturn.update({
+      where: { orderId },
+      data: {
+        status: ReturnStatus.label_issued,
+        trackingCode: code || orderReturn.trackingCode,
+        labelUrl: url || orderReturn.labelUrl,
+      },
+    });
+    return this.adminGetByOrder(orderId);
+  }
+
+  async adminMarkReturnInTransit(orderId: number) {
+    const claimed = await this.prisma.orderReturn.updateMany({
+      where: { orderId, status: ReturnStatus.label_issued },
+      data: { status: ReturnStatus.in_transit, shippedAt: new Date() },
+    });
+    if (claimed.count === 0) {
+      throw new ConflictException({
+        code: 'INVALID_RETURN_STATUS',
+        message: 'Registre a etiqueta antes de marcar o produto como em trânsito.',
+      });
+    }
+    return this.adminGetByOrder(orderId);
+  }
+
+  /** Produto devolvido chegou ao vendedor: estorna na Asaas (total ou parcial) e encerra o pedido como reembolsado. */
+  async adminConfirmReturnReceived(orderId: number) {
+    const orderReturn = await this.loadReturn(orderId);
+    const previous = orderReturn.status;
+    if (previous !== ReturnStatus.label_issued && previous !== ReturnStatus.in_transit) {
+      throw new ConflictException({
+        code: 'INVALID_RETURN_STATUS',
+        message: 'Registre a etiqueta da devolução antes de confirmar o recebimento.',
+      });
+    }
+
+    // Claim atômico: evita duplo estorno se dois admins confirmarem ao mesmo tempo.
+    const claimed = await this.prisma.orderReturn.updateMany({
+      where: { orderId, status: previous },
+      data: { status: ReturnStatus.received, receivedAt: new Date() },
+    });
+    if (claimed.count === 0) {
+      throw new ConflictException({
+        code: 'INVALID_RETURN_STATUS',
+        message: 'O recebimento desta devolução já foi confirmado.',
+      });
+    }
+
+    const order = await this.prisma.order.findUniqueOrThrow({
+      where: { id: orderId },
+      include: { listing: { select: { title: true, sellerId: true } } },
+    });
+
+    try {
+      await this.asaasPayments.refundPayment(
+        order.asaasPaymentId!,
+        orderReturn.shippingPayer === 'buyer' ? orderReturn.refundAmount : undefined,
+      );
+    } catch (error) {
+      // Se a Asaas falhar, volta o status anterior para o admin tentar de novo.
+      await this.prisma.orderReturn.update({
+        where: { orderId },
+        data: { status: previous, receivedAt: null },
+      });
+      throw error;
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.orderReturn.update({
+        where: { orderId },
+        data: { status: ReturnStatus.refunded, refundedAt: new Date() },
+      }),
+      this.prisma.order.update({
+        where: { id: orderId },
+        data: { status: OrderStatus.refunded, escrowStatus: 'refunded' },
+      }),
+    ]);
+
+    const title = order.listing.title;
+    await this.notificationsService.create({
+      userId: order.buyerId,
+      type: NotificationType.return_received,
+      title: 'Devolução recebida: valor reembolsado',
+      body: `Recebemos a devolução de "${title}". O reembolso de R$ ${orderReturn.refundAmount.toFixed(2).replace('.', ',')} foi solicitado.`,
+      orderId,
+      listingId: order.listingId,
+    });
+    await this.notificationsService.create({
+      userId: order.listing.sellerId,
+      type: NotificationType.return_received,
+      title: 'Devolução concluída',
+      body: `A devolução de "${title}" foi concluída e o pedido foi reembolsado.`,
+      orderId,
+      listingId: order.listingId,
+    });
 
     return this.adminGetByOrder(orderId);
   }

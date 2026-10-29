@@ -37,6 +37,7 @@ enum OrderStatus {
   shipment_in_progress
   shipped
   disputed
+  return_in_progress
   completed
   cancelled
   refunded
@@ -50,6 +51,8 @@ enum NotificationType {
   order_disputed
   dispute_admin_replied
   dispute_buyer_replied
+  return_approved
+  return_received
   checkout_available
 }
 
@@ -240,8 +243,23 @@ model Order {
   buyerId                String
   listingId              Int
   amount                 Float
-  /// Valor efetivamente cobrado do comprador (amount + juros do parcelamento no cartão 2x+). Igual a `amount` para Pix/boleto/1x.
+  /// Valor efetivamente cobrado do comprador (amount + frete + seguro + juros do cartão). Igual à soma dos três primeiros para Pix/boleto.
   chargeAmount           Float?
+  /// Frete de ida cobrado junto, SEPARADO do produto: fora da base de comissão e não repassado ao vendedor (destinado à Loggi).
+  shippingAmount         Float        @default(0)
+  /// Seguro de frete opcional (também separado do produto e fora da comissão).
+  shippingInsurance      Float        @default(0)
+  /// 'shipping' (envio) ou 'pickup' (retirada em mãos).
+  deliveryMode           String       @default("shipping")
+  shippingZip            String?
+  shippingStreet         String?
+  shippingNumber         String?
+  shippingComplement     String?
+  shippingDistrict       String?
+  shippingCity           String?
+  shippingState          String?
+  /// Preenchido pelo rastreio da Loggi (pós-integração); marca o início da janela de 7 dias da disputa.
+  deliveredAt            DateTime?
   paymentType            String
   installments           Int?
   cpfCnpj                String?
@@ -274,6 +292,7 @@ model Order {
   proofFiles    OrderProofFile[]
   notifications Notification[]
   dispute       OrderDispute?
+  orderReturn   OrderReturn?
 }
 
 enum DisputeStatus {
@@ -286,6 +305,28 @@ enum DisputeOutcome {
   buyer_satisfied
   refund_buyer
   release_seller
+  return_and_refund
+}
+
+/// Motivo informado pelo comprador. `withdrawal` = desistência sem defeito (frete de volta pago pelo comprador).
+enum DisputeReason {
+  defect
+  not_as_described
+  withdrawal
+}
+
+enum ReturnShippingPayer {
+  seller
+  buyer
+}
+
+enum ReturnStatus {
+  awaiting_label
+  label_issued
+  in_transit
+  received
+  refunded
+  cancelled
 }
 
 enum DisputeAuthorType {
@@ -299,6 +340,7 @@ model OrderDispute {
   orderId            Int             @unique
   status             DisputeStatus   @default(awaiting_admin)
   outcome            DisputeOutcome?
+  reason             DisputeReason   @default(defect)
   openedAt           DateTime        @default(now())
   resolvedAt         DateTime?
   resolvedByAdminId  String?
@@ -311,6 +353,31 @@ model OrderDispute {
   messages DisputeMessage[]
 
   @@index([status, lastBuyerMessageAt])
+}
+
+/// Devolução física aprovada pelo admin. A etiqueta reversa virá da Loggi (pós-integração); até lá o admin informa rastreio/etiqueta.
+model OrderReturn {
+  id                Int                 @id @default(autoincrement())
+  orderId           Int                 @unique
+  status            ReturnStatus        @default(awaiting_label)
+  /// Quem arca com o frete de volta: seller (defeito/diferente do anunciado) ou buyer (desistência sem defeito).
+  shippingPayer     ReturnShippingPayer
+  /// Estimativa do frete de volta (hoje = frete de ida; pós-Loggi = preço real da etiqueta).
+  shippingCost      Float
+  /// Valor devolvido ao comprador na Asaas.
+  refundAmount      Float
+  /// Quando o vendedor é o responsável: valor a recuperar do vendedor (cobrança ainda em aberto — ver checklist).
+  sellerDebtAmount  Float               @default(0)
+  trackingCode      String?
+  labelUrl          String?
+  approvedByAdminId String?
+  shippedAt         DateTime?
+  receivedAt        DateTime?
+  refundedAt        DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
 }
 
 model DisputeMessage {

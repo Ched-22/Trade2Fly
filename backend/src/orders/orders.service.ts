@@ -8,6 +8,8 @@ import { AsaasPaymentsService } from '../payments/asaas/asaas-payments.service';
 import { AsaasPayoutsService } from '../payments/asaas/asaas-payouts.service';
 import type { AsaasBillingType } from '../payments/asaas/asaas.types';
 import { calculateCardChargeTotal } from '../common/card-installment-fee';
+import { SHIPPING_INSURANCE_FEE } from '../common/shipping-fees';
+import { ShippingService } from '../shipping/shipping.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 
 const BILLING_TYPE_BY_PAYMENT_TYPE: Record<string, AsaasBillingType> = {
@@ -34,6 +36,7 @@ export class OrdersService {
     private readonly checkoutGrantsService: CheckoutGrantsService,
     private readonly asaasPayments: AsaasPaymentsService,
     private readonly asaasPayouts: AsaasPayoutsService,
+    private readonly shippingService: ShippingService,
   ) {}
 
   private async getOrCreateAsaasCustomer(
@@ -66,6 +69,7 @@ export class OrdersService {
     buyerId: string,
     sellerId: string,
     amount: number,
+    shippingTotal: number,
     dto: CreateOrderDto,
   ) {
     await this.asaasPayouts.assertSellerHasPayoutConfigured(sellerId);
@@ -74,12 +78,15 @@ export class OrdersService {
     const asaasCustomerId = await this.getOrCreateAsaasCustomer(buyer, dto.cpfCnpj);
     const billingType = BILLING_TYPE_BY_PAYMENT_TYPE[dto.paymentType];
 
+    // Frete e seguro são cobrados junto, mas ficam fora da base de comissão (`order.amount`).
+    const baseCharge = Math.round((amount + shippingTotal) * 100) / 100;
+
     // Parcelamento no cartão (2x+) tem taxa mais alta na Asaas; esse acréscimo é repassado ao
     // comprador como juros, para a comissão líquida não variar conforme a forma de pagamento.
     const { chargeAmount } =
       dto.paymentType === 'card'
-        ? calculateCardChargeTotal(amount, dto.installments ?? 1)
-        : { chargeAmount: amount };
+        ? calculateCardChargeTotal(baseCharge, dto.installments ?? 1)
+        : { chargeAmount: baseCharge };
 
     const payment = await this.asaasPayments.createCharge({
       customerId: asaasCustomerId,
@@ -212,12 +219,41 @@ export class OrdersService {
       }
     }
 
+    // Frete calculado no servidor (nunca confiamos no valor do cliente).
+    const deliveryMode = dto.deliveryMode ?? 'shipping';
+    let shippingAmount = 0;
+    let shippingInsurance = 0;
+    if (deliveryMode === 'shipping') {
+      const quote = await this.shippingService.quote({
+        listingId: dto.listingId,
+        destinationCep: dto.shippingZip!,
+        destinationCity: dto.shippingCity,
+        destinationState: dto.shippingState,
+      });
+      shippingAmount = quote.amount;
+      shippingInsurance = dto.shippingInsurance ? SHIPPING_INSURANCE_FEE : 0;
+    }
+
     const order = await this.prisma.$transaction(async (tx) => {
       const created = await tx.order.create({
         data: {
           buyerId,
           listingId: dto.listingId,
           amount,
+          shippingAmount,
+          shippingInsurance,
+          deliveryMode,
+          ...(deliveryMode === 'shipping'
+            ? {
+                shippingZip: dto.shippingZip,
+                shippingStreet: dto.shippingStreet?.trim(),
+                shippingNumber: dto.shippingNumber?.trim(),
+                shippingComplement: dto.shippingComplement?.trim() || undefined,
+                shippingDistrict: dto.shippingDistrict?.trim(),
+                shippingCity: dto.shippingCity?.trim(),
+                shippingState: dto.shippingState?.toUpperCase(),
+              }
+            : {}),
           paymentType: dto.paymentType,
           installments: dto.paymentType === 'card' ? dto.installments : undefined,
           cpfCnpj: dto.cpfCnpj,
@@ -238,7 +274,14 @@ export class OrdersService {
     });
 
     try {
-      await this.chargeOrder(order.id, buyerId, listing.sellerId, amount, dto);
+      await this.chargeOrder(
+        order.id,
+        buyerId,
+        listing.sellerId,
+        amount,
+        shippingAmount + shippingInsurance,
+        dto,
+      );
       return this.prisma.order.findUniqueOrThrow({
         where: { id: order.id },
         include: {
