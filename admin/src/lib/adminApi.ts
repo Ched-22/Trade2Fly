@@ -286,7 +286,32 @@ export function getViolations(params: URLSearchParams) {
 }
 
 export type DisputeStatus = 'awaiting_admin' | 'awaiting_buyer' | 'resolved';
-export type DisputeOutcome = 'buyer_satisfied' | 'refund_buyer' | 'release_seller';
+export type DisputeOutcome =
+  | 'buyer_satisfied'
+  | 'refund_buyer'
+  | 'release_seller'
+  | 'return_and_refund';
+export type DisputeReason = 'defect' | 'not_as_described' | 'withdrawal';
+export type ReturnShippingPayer = 'seller' | 'buyer';
+export type ReturnStatus =
+  | 'awaiting_label'
+  | 'label_issued'
+  | 'in_transit'
+  | 'received'
+  | 'refunded'
+  | 'cancelled';
+
+export type AdminOrderReturn = {
+  status: ReturnStatus;
+  shippingPayer: ReturnShippingPayer;
+  shippingCost: number;
+  refundAmount: number;
+  sellerDebtAmount: number;
+  trackingCode: string | null;
+  labelUrl: string | null;
+  receivedAt: string | null;
+  refundedAt: string | null;
+};
 
 export type DisputeMessage = {
   id: number;
@@ -300,6 +325,7 @@ export type AdminDisputeListItem = {
   orderId: number;
   status: DisputeStatus;
   outcome: DisputeOutcome | null;
+  reason: DisputeReason;
   openedAt: string;
   lastBuyerMessageAt: string;
   resolvedAt: string | null;
@@ -316,6 +342,8 @@ export type AdminDisputeDetail = {
   orderId: number;
   status: DisputeStatus;
   outcome: DisputeOutcome | null;
+  reason: DisputeReason;
+  return: AdminOrderReturn | null;
   openedAt: string;
   resolvedAt: string | null;
   lastBuyerMessageAt: string;
@@ -325,6 +353,10 @@ export type AdminDisputeDetail = {
     status: string;
     escrowStatus: string;
     amount: number;
+    chargeAmount: number | null;
+    shippingAmount: number;
+    shippingInsurance: number;
+    deliveryMode: 'shipping' | 'pickup';
     listingTitle: string;
     buyer: { id: string; displayName: string; email: string };
     seller: { id: string; displayName: string; email: string };
@@ -350,11 +382,28 @@ export function replyToDispute(orderId: number, body: string) {
 
 export function resolveDispute(
   orderId: number,
-  outcome: 'refund_buyer' | 'release_seller',
+  outcome: 'refund_buyer' | 'release_seller' | 'return_and_refund',
   note: string,
+  shippingPayer?: ReturnShippingPayer,
 ) {
   return apiPost<AdminDisputeDetail>(`/api/admin/disputes/order/${orderId}/resolve`, {
     outcome,
     note,
+    shippingPayer,
   });
+}
+
+export function setReturnLabel(orderId: number, trackingCode?: string, labelUrl?: string) {
+  return apiPost<AdminDisputeDetail>(`/api/admin/disputes/order/${orderId}/return/label`, {
+    trackingCode: trackingCode || undefined,
+    labelUrl: labelUrl || undefined,
+  });
+}
+
+export function markReturnInTransit(orderId: number) {
+  return apiPost<AdminDisputeDetail>(`/api/admin/disputes/order/${orderId}/return/in-transit`, {});
+}
+
+export function confirmReturnReceived(orderId: number) {
+  return apiPost<AdminDisputeDetail>(`/api/admin/disputes/order/${orderId}/return/received`, {});
 }

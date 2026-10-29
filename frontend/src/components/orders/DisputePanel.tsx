@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   confirmDisputeResolved,
+  DISPUTE_REASON_LABELS,
   getOrderDispute,
   replyToDispute,
+  RETURN_STATUS_LABELS,
   type OrderDispute,
 } from '../../lib/ordersApi';
 import { AuthAlert } from '../auth/AuthAlert';
@@ -22,7 +24,13 @@ const OUTCOME_MESSAGES: Record<string, string> = {
   buyer_satisfied: 'Disputa encerrada: você confirmou que o problema foi resolvido.',
   refund_buyer: 'Disputa encerrada: o valor da compra foi reembolsado.',
   release_seller: 'Disputa encerrada: o pedido foi concluído a favor do vendedor.',
+  return_and_refund:
+    'Disputa encerrada: a devolução do produto foi aprovada. O reembolso é feito quando o vendedor receber o produto.',
 };
+
+function formatMoney(value: number) {
+  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
 
 export function DisputePanel({ orderId, onOrderChanged }: DisputePanelProps) {
   const [dispute, setDispute] = useState<OrderDispute | null>(null);
@@ -86,7 +94,10 @@ export function DisputePanel({ orderId, onOrderChanged }: DisputePanelProps) {
     <section className="space-y-4 rounded-xl border border-nuvem bg-white p-5">
       <header>
         <h2 className="font-display text-xl font-extrabold">Disputa do pedido</h2>
-        <p className="text-sm text-cinza">Aberta em {formatDateTime(dispute.openedAt)}</p>
+        <p className="text-sm text-cinza">
+          Aberta em {formatDateTime(dispute.openedAt)}
+          {dispute.reason ? ` · ${DISPUTE_REASON_LABELS[dispute.reason]}` : ''}
+        </p>
       </header>
 
       <ol className="space-y-3">
@@ -177,6 +188,41 @@ export function DisputePanel({ orderId, onOrderChanged }: DisputePanelProps) {
         <AuthAlert variant="success">
           {(dispute.outcome && OUTCOME_MESSAGES[dispute.outcome]) ?? 'Disputa encerrada.'}
         </AuthAlert>
+      ) : null}
+
+      {dispute.return ? (
+        <div className="space-y-1 rounded-lg border border-nuvem bg-bruma p-4 text-sm">
+          <p className="font-semibold text-solo">
+            Devolução: {RETURN_STATUS_LABELS[dispute.return.status]}
+          </p>
+          <p className="text-cinza">
+            Frete de volta:{' '}
+            <strong className="text-solo">{formatMoney(dispute.return.shippingCost)}</strong> —{' '}
+            {dispute.return.shippingPayer === 'seller'
+              ? 'por conta do vendedor'
+              : 'descontado do seu reembolso'}
+            .
+          </p>
+          <p className="text-cinza">
+            Reembolso previsto:{' '}
+            <strong className="text-solo">{formatMoney(dispute.return.refundAmount)}</strong>
+          </p>
+          {dispute.return.trackingCode ? (
+            <p className="text-cinza">
+              Rastreio: <strong className="text-solo">{dispute.return.trackingCode}</strong>
+            </p>
+          ) : null}
+          {dispute.return.labelUrl ? (
+            <a
+              href={dispute.return.labelUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="font-semibold text-voo underline"
+            >
+              Abrir etiqueta de devolução
+            </a>
+          ) : null}
+        </div>
       ) : null}
     </section>
   );

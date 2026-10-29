@@ -28,7 +28,7 @@ export function OrderDetailPage() {
         ← Voltar aos pedidos
       </Link>
 
-      {order.status === 'disputed' ? (
+      {order.status === 'disputed' || order.status === 'return_in_progress' ? (
         <Link to={`/disputas/${order.id}`} className="text-sm font-semibold text-pull hover:underline">
           Abrir na fila de Disputas →
         </Link>

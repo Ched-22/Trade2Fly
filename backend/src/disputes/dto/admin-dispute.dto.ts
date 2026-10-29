@@ -22,11 +22,29 @@ export class AdminDisputesQueryDto {
 }
 
 export class AdminResolveDisputeDto {
-  @IsIn(['refund_buyer', 'release_seller'])
-  outcome!: 'refund_buyer' | 'release_seller';
+  /** `return_and_refund` = produto volta (etiqueta reversa) e o reembolso sai quando o admin confirma o recebimento. */
+  @IsIn(['refund_buyer', 'release_seller', 'return_and_refund'])
+  outcome!: 'refund_buyer' | 'release_seller' | 'return_and_refund';
+
+  /** Quem paga o frete de volta. Padrão: comprador se o motivo foi desistência, vendedor nos demais. */
+  @IsOptional()
+  @IsIn(['seller', 'buyer'])
+  shippingPayer?: 'seller' | 'buyer';
 
   @IsString()
   @MinLength(5)
   @MaxLength(2000)
   note!: string;
+}
+
+export class AdminReturnLabelDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(60)
+  trackingCode?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  labelUrl?: string;
 }

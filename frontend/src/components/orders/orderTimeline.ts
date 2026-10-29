@@ -41,6 +41,7 @@ export function buildBuyerOrderTimeline(order: OrderDetail): OrderTimelineStep[]
     shipment_in_progress: 2,
     shipped: 4,
     disputed: 5,
+    return_in_progress: 5,
     completed: 5,
   };
 
@@ -48,7 +49,9 @@ export function buildBuyerOrderTimeline(order: OrderDetail): OrderTimelineStep[]
   const terminalLabel =
     order.status === 'disputed'
       ? 'Em disputa'
-      : order.status === 'completed'
+      : order.status === 'return_in_progress'
+        ? 'Devolução em andamento'
+        : order.status === 'completed'
         ? 'Concluído'
         : order.status === 'refunded'
           ? 'Reembolsado'
@@ -82,7 +85,10 @@ export function buildBuyerOrderTimeline(order: OrderDetail): OrderTimelineStep[]
   ];
 
   const terminalDone =
-    order.status === 'completed' || order.status === 'disputed' || order.status === 'refunded';
+    order.status === 'completed' ||
+    order.status === 'disputed' ||
+    order.status === 'return_in_progress' ||
+    order.status === 'refunded';
 
   return raw.map((step, index) => {
     let state: OrderTimelineStepState;

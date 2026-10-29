@@ -8,9 +8,11 @@ import {
 import { ConfigService } from '@nestjs/config';
 import {
   DisputeAuthorType,
+  DisputeReason,
   DisputeStatus,
   NotificationType,
   OrderProofKind,
+  OrderReturn,
   OrderStatus,
   Prisma,
 } from '@prisma/client';
@@ -99,7 +101,12 @@ export class FulfillmentService {
 
   formatOrderDetail(
     order: OrderWithRelations,
-    opts?: { commissionExemptResolved?: boolean; viewerUserId?: string },
+    opts?: {
+      commissionExemptResolved?: boolean;
+      viewerUserId?: string;
+      orderReturn?: OrderReturn | null;
+      disputeReasonType?: DisputeReason | null;
+    },
   ) {
     const proofs = order.proofFiles.map((file) => this.formatProofFile(file));
     const byKind = (kind: OrderProofKind) => proofs.filter((p) => p.kind === kind);
@@ -134,6 +141,35 @@ export class FulfillmentService {
       },
       buyer: order.buyer,
       seller: order.listing.seller,
+      shipping: {
+        mode: order.deliveryMode,
+        amount: order.shippingAmount,
+        insurance: order.shippingInsurance,
+        address:
+          order.deliveryMode === 'shipping'
+            ? {
+                zip: order.shippingZip,
+                street: order.shippingStreet,
+                number: order.shippingNumber,
+                complement: order.shippingComplement,
+                district: order.shippingDistrict,
+                city: order.shippingCity,
+                state: order.shippingState,
+              }
+            : null,
+      },
+      return: opts?.orderReturn
+        ? {
+            status: opts.orderReturn.status,
+            shippingPayer: opts.orderReturn.shippingPayer,
+            shippingCost: opts.orderReturn.shippingCost,
+            refundAmount: opts.orderReturn.refundAmount,
+            trackingCode: opts.orderReturn.trackingCode,
+            labelUrl: opts.orderReturn.labelUrl,
+            receivedAt: opts.orderReturn.receivedAt?.toISOString() ?? null,
+            refundedAt: opts.orderReturn.refundedAt?.toISOString() ?? null,
+          }
+        : null,
       fulfillment: {
         shipmentProof: {
           productPhotos: hideShipmentMedia ? [] : byKind(OrderProofKind.product_photo),
@@ -165,6 +201,7 @@ export class FulfillmentService {
               ? 'dispute'
               : null,
         disputeReason: order.disputeReason,
+        disputeReasonType: opts?.disputeReasonType ?? null,
         buyerConfirmedAt: order.buyerConfirmedAt?.toISOString() ?? null,
         disputedAt: order.disputedAt?.toISOString() ?? null,
         autoCompleteAt: order.autoCompleteAt?.toISOString() ?? null,
@@ -205,9 +242,18 @@ export class FulfillmentService {
 
   private async formatOrderDetailResolved(order: OrderWithRelations, viewerUserId: string) {
     const commissionExempt = await this.resolveCommissionExemptForDisplay(order);
+    const [orderReturn, dispute] = await Promise.all([
+      this.prisma.orderReturn.findUnique({ where: { orderId: order.id } }),
+      this.prisma.orderDispute.findUnique({
+        where: { orderId: order.id },
+        select: { reason: true },
+      }),
+    ]);
     return this.formatOrderDetail(order, {
       commissionExemptResolved: commissionExempt,
       viewerUserId,
+      orderReturn,
+      disputeReasonType: dispute?.reason ?? null,
     });
   }
 
@@ -600,6 +646,7 @@ export class FulfillmentService {
     orderId: number,
     decision: 'confirm' | 'dispute',
     reason?: string,
+    reasonType?: DisputeReason,
   ) {
     const order = await this.getOrderForUser(orderId, buyerId);
     if (order.buyerId !== buyerId) {
@@ -615,6 +662,19 @@ export class FulfillmentService {
     this.validateReceiptProofs(order.proofFiles);
 
     if (decision === 'dispute') {
+      // Janela de 7 dias (hoje contada do envio; passa a contar da entrega com o rastreio da Loggi).
+      if (order.autoCompleteAt && order.autoCompleteAt.getTime() < Date.now()) {
+        throw new ConflictException({
+          code: 'DISPUTE_WINDOW_EXPIRED',
+          message: `O prazo de ${this.autoCompleteDays} dias para abrir uma disputa terminou.`,
+        });
+      }
+      if (!reasonType) {
+        throw new BadRequestException({
+          code: 'DISPUTE_REASON_TYPE_REQUIRED',
+          message: 'Informe o tipo de problema.',
+        });
+      }
       if (!reason?.trim()) {
         throw new BadRequestException({
           code: 'DISPUTE_REASON_REQUIRED',
@@ -634,6 +694,7 @@ export class FulfillmentService {
           dispute: {
             create: {
               status: DisputeStatus.awaiting_admin,
+              reason: reasonType,
               openedAt: now,
               lastBuyerMessageAt: now,
               messages: {

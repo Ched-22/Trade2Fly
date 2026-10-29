@@ -1,11 +1,15 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
+  confirmReturnReceived,
   getDisputeByOrder,
   getOrder,
+  markReturnInTransit,
   replyToDispute,
   resolveDispute,
+  setReturnLabel,
   type AdminDisputeDetail,
+  type ReturnShippingPayer,
   type AdminOrderDetail,
   type AdminProofFile,
 } from '../lib/adminApi';
@@ -65,7 +69,168 @@ const OUTCOME_LABELS: Record<string, string> = {
   buyer_satisfied: 'Comprador confirmou que o problema foi resolvido',
   refund_buyer: 'Reembolsado ao comprador',
   release_seller: 'Liberado ao vendedor',
+  return_and_refund: 'Devolução aprovada (reembolso após o recebimento do produto)',
 };
+
+const REASON_LABELS: Record<string, string> = {
+  defect: 'Produto com defeito',
+  not_as_described: 'Produto diferente do anunciado',
+  withdrawal: 'Desistência (sem defeito)',
+};
+
+const RETURN_STATUS_LABELS: Record<string, string> = {
+  awaiting_label: 'Aguardando etiqueta',
+  label_issued: 'Etiqueta emitida',
+  in_transit: 'Em trânsito',
+  received: 'Recebida',
+  refunded: 'Reembolsada',
+  cancelled: 'Cancelada',
+};
+
+function ReturnSection({
+  dispute,
+  onChange,
+}: {
+  dispute: AdminDisputeDetail;
+  onChange: (next: AdminDisputeDetail) => void;
+}) {
+  const orderReturn = dispute.return;
+  const [trackingCode, setTrackingCode] = useState(orderReturn?.trackingCode ?? '');
+  const [labelUrl, setLabelUrl] = useState(orderReturn?.labelUrl ?? '');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  if (!orderReturn) return null;
+
+  const orderId = dispute.orderId;
+  const run = async (action: () => Promise<AdminDisputeDetail>) => {
+    setBusy(true);
+    setError(null);
+    try {
+      onChange(await action());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Não foi possível concluir a ação.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const canRegisterLabel =
+    orderReturn.status === 'awaiting_label' || orderReturn.status === 'label_issued';
+  const canReceive = orderReturn.status === 'label_issued' || orderReturn.status === 'in_transit';
+
+  const handleReceived = () => {
+    const question =
+      orderReturn.shippingPayer === 'buyer'
+        ? `Confirmar o recebimento e reembolsar ${formatPrice(orderReturn.refundAmount)} ao comprador (frete de volta descontado)? Não pode ser desfeito.`
+        : 'Confirmar o recebimento e reembolsar integralmente o comprador? Não pode ser desfeito.';
+    if (window.confirm(question)) void run(() => confirmReturnReceived(orderId));
+  };
+
+  return (
+    <section className="space-y-3 rounded-xl border border-voo/30 bg-voo/5 p-5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="font-bold text-solo">Devolução do produto</h2>
+        <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-solo">
+          {RETURN_STATUS_LABELS[orderReturn.status]}
+        </span>
+      </div>
+
+      <div className="grid gap-3 text-sm sm:grid-cols-3">
+        <div>
+          <div className="text-xs uppercase text-cinza">Frete de volta</div>
+          <div className="font-mono font-bold">{formatPrice(orderReturn.shippingCost)}</div>
+          <div className="text-xs text-cinza">
+            Pago pelo {orderReturn.shippingPayer === 'seller' ? 'vendedor' : 'comprador'}
+          </div>
+        </div>
+        <div>
+          <div className="text-xs uppercase text-cinza">Reembolso ao comprador</div>
+          <div className="font-mono font-bold">{formatPrice(orderReturn.refundAmount)}</div>
+        </div>
+        {orderReturn.shippingPayer === 'seller' ? (
+          <div>
+            <div className="text-xs uppercase text-cinza">Débito do vendedor</div>
+            <div className="font-mono font-bold text-pull">
+              {formatPrice(orderReturn.sellerDebtAmount)}
+            </div>
+            <div className="text-xs text-cinza">Cobrança ainda manual (em aberto).</div>
+          </div>
+        ) : null}
+      </div>
+
+      {error ? (
+        <p className="rounded-lg border border-pull/30 bg-pull/5 px-3 py-2 text-sm text-pull">
+          {error}
+        </p>
+      ) : null}
+
+      {canRegisterLabel ? (
+        <div className="space-y-2 border-t border-voo/20 pt-3">
+          <p className="text-xs text-cinza">
+            Etiqueta reversa manual — a geração automática virá com a integração da Loggi.
+          </p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <input
+              value={trackingCode}
+              onChange={(event) => setTrackingCode(event.target.value)}
+              placeholder="Código de rastreio"
+              className="rounded-md border border-nuvem p-2 text-sm"
+            />
+            <input
+              value={labelUrl}
+              onChange={(event) => setLabelUrl(event.target.value)}
+              placeholder="Link da etiqueta"
+              className="rounded-md border border-nuvem p-2 text-sm"
+            />
+          </div>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void run(() => setReturnLabel(orderId, trackingCode, labelUrl))}
+            className="cursor-pointer rounded-lg bg-voo px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+          >
+            Registrar etiqueta
+          </button>
+        </div>
+      ) : (
+        <p className="text-sm text-cinza">
+          {orderReturn.trackingCode ? `Rastreio: ${orderReturn.trackingCode}` : null}
+          {orderReturn.labelUrl ? (
+            <>
+              {' · '}
+              <a href={orderReturn.labelUrl} target="_blank" rel="noreferrer" className="text-voo underline">
+                etiqueta
+              </a>
+            </>
+          ) : null}
+        </p>
+      )}
+
+      <div className="flex flex-wrap gap-2">
+        {orderReturn.status === 'label_issued' ? (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void run(() => markReturnInTransit(orderId))}
+            className="cursor-pointer rounded-lg border border-nuvem bg-white px-4 py-2 text-sm font-semibold hover:bg-bruma disabled:opacity-50"
+          >
+            Marcar em trânsito
+          </button>
+        ) : null}
+        {canReceive ? (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={handleReceived}
+            className="cursor-pointer rounded-lg bg-pull px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+          >
+            Confirmar recebimento e reembolsar
+          </button>
+        ) : null}
+      </div>
+    </section>
+  );
+}
 
 function DisputeConversation({
   dispute,
@@ -76,6 +241,8 @@ function DisputeConversation({
 }) {
   const [reply, setReply] = useState('');
   const [note, setNote] = useState('');
+  const defaultPayer: ReturnShippingPayer = dispute.reason === 'withdrawal' ? 'buyer' : 'seller';
+  const [payer, setPayer] = useState<ReturnShippingPayer>(defaultPayer);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const resolved = dispute.status === 'resolved';
@@ -102,7 +269,7 @@ function DisputeConversation({
     void run(() => replyToDispute(orderId, reply), () => setReply(''));
   };
 
-  const handleResolve = (outcome: 'refund_buyer' | 'release_seller') => {
+  const handleResolve = (outcome: 'refund_buyer' | 'release_seller' | 'return_and_refund') => {
     if (note.trim().length < 5) {
       setError('Escreva a justificativa da decisão (ela será enviada ao comprador).');
       return;
@@ -110,15 +277,23 @@ function DisputeConversation({
     const question =
       outcome === 'refund_buyer'
         ? `Reembolsar ${formatPrice(dispute.order.amount)} ao comprador? Esta ação não pode ser desfeita.`
-        : 'Liberar o valor ao vendedor e concluir o pedido? Esta ação não pode ser desfeita.';
+        : outcome === 'return_and_refund'
+          ? `Aprovar a devolução do produto com o frete de volta pago pelo ${payer === 'buyer' ? 'COMPRADOR (descontado do reembolso)' : 'VENDEDOR'}? O reembolso só sai quando você confirmar o recebimento.`
+          : 'Liberar o valor ao vendedor e concluir o pedido? Esta ação não pode ser desfeita.';
     if (!window.confirm(question)) return;
-    void run(() => resolveDispute(orderId, outcome, note), () => setNote(''));
+    void run(
+      () => resolveDispute(orderId, outcome, note, outcome === 'return_and_refund' ? payer : undefined),
+      () => setNote(''),
+    );
   };
 
   return (
     <section className="space-y-4 rounded-xl border border-nuvem bg-white p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="font-bold text-solo">Conversa com o comprador</h2>
+        <div>
+          <h2 className="font-bold text-solo">Conversa com o comprador</h2>
+          <p className="text-xs text-cinza">Motivo: {REASON_LABELS[dispute.reason] ?? dispute.reason}</p>
+        </div>
         <span className="rounded-full bg-bruma px-3 py-1 text-xs font-semibold text-solo">
           {dispute.status === 'awaiting_admin'
             ? 'Aguardando resposta nossa'
@@ -198,6 +373,32 @@ function DisputeConversation({
               className="w-full rounded-md border border-nuvem p-3 text-sm"
               placeholder="Justificativa da decisão — será enviada ao comprador na conversa."
             />
+            <div className="flex flex-wrap items-center gap-2 rounded-lg border border-nuvem bg-bruma p-3 text-sm">
+              <span className="font-semibold">Devolução do produto — frete de volta pago pelo:</span>
+              <select
+                value={payer}
+                onChange={(event) => setPayer(event.target.value as ReturnShippingPayer)}
+                className="rounded-md border border-nuvem bg-white p-1.5 text-sm"
+              >
+                <option value="seller">Vendedor (defeito / diferente do anunciado)</option>
+                <option value="buyer">Comprador (desistência sem defeito)</option>
+              </select>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => handleResolve('return_and_refund')}
+                className="cursor-pointer rounded-lg bg-voo px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+              >
+                Aprovar devolução
+              </button>
+              {dispute.order.deliveryMode === 'pickup' ? (
+                <span className="text-xs text-cinza">Retirada em mãos: sem frete de volta.</span>
+              ) : (
+                <span className="text-xs text-cinza">
+                  Frete de volta estimado: {formatPrice(dispute.order.shippingAmount)}
+                </span>
+              )}
+            </div>
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
@@ -300,7 +501,10 @@ export function DisputeDetailPage() {
       </div>
 
       {dispute ? (
-        <DisputeConversation dispute={dispute} onChange={handleDisputeChange} />
+        <>
+          <DisputeConversation dispute={dispute} onChange={handleDisputeChange} />
+          <ReturnSection dispute={dispute} onChange={handleDisputeChange} />
+        </>
       ) : (
         <section className="rounded-xl border border-pull/30 bg-pull/5 p-5">
           <h2 className="mb-2 font-bold text-solo">Reclamação do comprador</h2>

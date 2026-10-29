@@ -60,6 +60,12 @@ export class OrderFulfillmentController {
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: ReceiptDecisionDto,
   ) {
-    return this.fulfillmentService.receiptDecision(req.user.id, id, dto.decision, dto.reason);
+    return this.fulfillmentService.receiptDecision(
+      req.user.id,
+      id,
+      dto.decision,
+      dto.reason,
+      dto.reasonType,
+    );
   }
 }

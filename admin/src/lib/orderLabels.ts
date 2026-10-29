@@ -4,6 +4,7 @@ export const ORDER_STATUS_LABELS: Record<string, string> = {
   shipment_in_progress: 'Preparando envio',
   shipped: 'Enviado',
   disputed: 'Em disputa',
+  return_in_progress: 'Devolução em andamento',
   completed: 'Concluído',
   cancelled: 'Cancelado',
   refunded: 'Reembolsado',

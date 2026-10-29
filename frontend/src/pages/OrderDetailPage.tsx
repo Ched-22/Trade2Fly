@@ -13,6 +13,7 @@ import {
   getOrder,
   submitReceiptDecision,
   uploadOrderProof,
+  type DisputeReason,
   type OrderDetail,
 } from '../lib/ordersApi';
 
@@ -70,6 +71,14 @@ function StatusGuidance({ order }: { order: OrderDetail }) {
     return (
       <AuthAlert variant="info">
         Disputa em análise pela equipe Trade2Fly. Acompanhe a conversa abaixo.
+      </AuthAlert>
+    );
+  }
+  if (order.status === 'return_in_progress') {
+    return (
+      <AuthAlert variant="info">
+        Devolução aprovada. Acompanhe abaixo o envio do produto de volta; o reembolso é feito quando
+        o vendedor receber o produto.
       </AuthAlert>
     );
   }
@@ -148,12 +157,12 @@ export function OrderDetailPage() {
     }
   };
 
-  const handleDispute = async (reason: string) => {
+  const handleDispute = async (reasonType: DisputeReason, reason: string) => {
     if (!order) return;
     setActionLoading(true);
     setError(null);
     try {
-      await submitReceiptDecision(order.id, 'dispute', reason);
+      await submitReceiptDecision(order.id, 'dispute', reason, reasonType);
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Não foi possível contestar.');
@@ -212,7 +221,9 @@ export function OrderDetailPage() {
         />
       ) : null}
 
-      {order.status === 'disputed' || order.status === 'refunded' ? (
+      {order.status === 'disputed' ||
+      order.status === 'return_in_progress' ||
+      order.status === 'refunded' ? (
         <DisputePanel orderId={order.id} onOrderChanged={() => void load()} />
       ) : null}
     </div>
