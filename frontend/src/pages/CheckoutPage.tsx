@@ -1,4 +1,4 @@
-import { MapPin, Package } from 'lucide-react';
+import { CheckCircle2, MapPin, Package } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getChatSocket } from '../lib/chatSocket';
@@ -420,7 +420,7 @@ export function CheckoutPage() {
   if (paid) {
     return (
       <div className="t2f-page max-w-2xl text-center">
-        <div className="mb-4 text-5xl">✓</div>
+        <div className="mb-4 flex justify-center"><CheckCircle2 className="h-14 w-14 text-liberado" strokeWidth={1.25} /></div>
         <h1 className="mb-3 font-display text-3xl font-extrabold">Pagamento registrado!</h1>
         <p className="mb-8 text-cinza">
           Pagamento confirmado. O vendedor será notificado para{' '}
@@ -854,7 +854,7 @@ export function CheckoutPage() {
             </div>
           </div>
           <p className="mt-4 rounded-lg bg-liberado-light p-3 text-xs leading-relaxed text-liberado-dark">
-            🔒 Pagamento processado com segurança via Asaas.
+            Pagamento processado com segurança via Asaas.
           </p>
           {sellerNotReady ? (
             <div className="mt-3">

@@ -62,11 +62,11 @@ export const categoryCards: CategoryCardData[] = [
 ];
 
 export const homeSeals = [
-  { icon: '🔒', title: 'Pagamento seguro', sub: 'Custódia (escrow)' },
-  { icon: '🔍', title: 'Busca fácil', sub: 'Filtros de paraquedismo' },
-  { icon: '🪂', title: 'Itens novos', sub: 'Todos os dias' },
-  { icon: '📈', title: 'Mais visibilidade', sub: 'Para o seu anúncio' },
-  { icon: '🔔', title: 'Alertas', sub: 'De equipamento' },
+  { icon: 'lock', title: 'Pagamento seguro', sub: 'Custódia (escrow)' },
+  { icon: 'search', title: 'Busca fácil', sub: 'Filtros de paraquedismo' },
+  { icon: 'package', title: 'Itens novos', sub: 'Todos os dias' },
+  { icon: 'trending', title: 'Mais visibilidade', sub: 'Para o seu anúncio' },
+  { icon: 'bell', title: 'Alertas', sub: 'De equipamento' },
 ];
 
 export const protectionItems = [

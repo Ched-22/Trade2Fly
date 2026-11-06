@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Loader2, MessageCircle, Send, X } from 'lucide-react';
 import { cn } from '../../lib/cn';
+import { useAuth } from '../../hooks/useAuth';
 import { sendSupportChatMessage, type SupportChatTurn } from '../../lib/supportChatApi';
 
 type DisplayMessage = {
@@ -14,6 +15,7 @@ const GREETING: DisplayMessage = {
 };
 
 export function SupportChatWidget() {
+  const { loggedIn } = useAuth();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<DisplayMessage[]>([GREETING]);
   const [draft, setDraft] = useState('');
@@ -53,7 +55,9 @@ export function SupportChatWidget() {
   }
 
   return (
-    <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end gap-3">
+    <div className={`fixed right-5 z-50 flex flex-col items-end gap-3 ${
+        loggedIn ? 'bottom-[calc(4rem+env(safe-area-inset-bottom))] md:bottom-5' : 'bottom-5'
+      }`}>
       {open && (
         <div className="flex h-[520px] w-[360px] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-xl border border-nuvem bg-white shadow-2xl">
           <div className="flex items-center justify-between bg-voo px-4 py-3 text-white">

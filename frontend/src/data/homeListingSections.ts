@@ -19,7 +19,7 @@ export type HomeListingSectionConfig = {
 export const homeListingSections: HomeListingSectionConfig[] = [
   {
     id: 'trending',
-    title: 'Em alta 🔥',
+    title: 'Em alta',
     subtitle: 'Os anúncios mais procurados desta semana.',
     seeMorePath: '/busca',
     seeMoreLabel: 'Ver todos os anúncios',

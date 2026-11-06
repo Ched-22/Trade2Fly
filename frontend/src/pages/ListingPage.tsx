@@ -5,6 +5,7 @@ import { getChatSocket } from '../lib/chatSocket';
 import { SendOfferModal } from '../components/listing/SendOfferModal';
 import { AuthAlert } from '../components/auth/AuthAlert';
 import { Badge } from '../components/ui/Badge';
+import { PhotoLightbox } from '../components/ui/PhotoLightbox';
 import { Button } from '../components/ui/Button';
 import { formatPrice } from '../lib/priceFormat';
 import { apiGet } from '../lib/api';
@@ -35,6 +36,7 @@ export function ListingPage() {
   const [listing, setListing] = useState<Listing | null>(null);
   const [photos, setPhotos] = useState<string[]>([]);
   const [activePhoto, setActivePhoto] = useState(0);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
@@ -229,14 +231,20 @@ export function ListingPage() {
     <div className="mx-auto max-w-[1180px] overflow-x-hidden px-4 py-5 pb-14 sm:px-6 sm:py-6 sm:pb-16">
       <div className="grid min-w-0 gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:gap-8">
         <div className="min-w-0">
-          <div
-            className="mb-3 h-52 rounded-xl bg-cover bg-center sm:h-72 lg:h-[360px]"
-            style={
-              heroPhoto
-                ? { backgroundImage: `url(${heroPhoto})` }
-                : { background: listing.grad }
-            }
-          />
+          {heroPhoto ? (
+            <button
+              type="button"
+              onClick={() => setLightboxIndex(activePhoto)}
+              className="mb-3 block h-52 w-full cursor-zoom-in rounded-xl bg-cover bg-center sm:h-72 lg:h-[360px]"
+              style={{ backgroundImage: `url(${heroPhoto})` }}
+              aria-label="Ampliar foto do anúncio"
+            />
+          ) : (
+            <div
+              className="mb-3 h-52 rounded-xl bg-cover bg-center sm:h-72 lg:h-[360px]"
+              style={{ background: listing.grad }}
+            />
+          )}
           {photos.length > 1 ? (
             <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
               {photos.map((photo, index) => (
@@ -358,6 +366,12 @@ export function ListingPage() {
         </div>
       </div>
 
+      <PhotoLightbox
+        urls={photos}
+        index={lightboxIndex}
+        title={listing.title}
+        onIndexChange={setLightboxIndex}
+      />
       <SendOfferModal
         key={listing.id}
         open={offerOpen}

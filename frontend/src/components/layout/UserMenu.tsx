@@ -17,6 +17,8 @@ import { cn } from '../../lib/cn';
 type UserMenuProps = {
   user: AuthUser;
   onLogout: () => void;
+  /** 'bar' = item da barra inferior mobile (abre para cima). */
+  variant?: 'header' | 'bar';
 };
 
 type MenuItem = {
@@ -30,7 +32,8 @@ function MenuDivider() {
   return <div className="my-1 h-px bg-nuvem" role="separator" />;
 }
 
-export function UserMenu({ user, onLogout }: UserMenuProps) {
+export function UserMenu({ user, onLogout, variant = 'header' }: UserMenuProps) {
+  const isBar = variant === 'bar';
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
@@ -101,29 +104,47 @@ export function UserMenu({ user, onLogout }: UserMenuProps) {
   );
 
   return (
-    <div ref={containerRef} className="relative shrink-0">
+    <div ref={containerRef} className={cn('relative', isBar ? 'w-full' : 'shrink-0')}>
       <button
         type="button"
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label="Menu da conta"
         onClick={() => setOpen((current) => !current)}
-        className="flex cursor-pointer items-center gap-2 rounded-lg border border-nuvem bg-white py-1 pr-1 pl-1 text-solo transition-colors hover:bg-bruma sm:pr-3"
+        className={cn(
+          'flex cursor-pointer items-center transition-colors',
+          isBar
+            ? 'w-full justify-center border-t-2 py-3 text-white/60 ' +
+                (open ? 'border-pull text-white' : 'border-transparent')
+            : 'gap-2 rounded-lg border border-nuvem bg-white py-1 pr-1 pl-1 text-solo hover:bg-bruma sm:pr-3',
+        )}
       >
-        <span className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-solo text-xs font-bold text-white sm:h-[30px] sm:w-[30px] sm:text-sm">
+        <span
+          className={cn(
+            'flex items-center justify-center overflow-hidden rounded-full text-xs font-bold',
+            isBar
+              ? 'h-5 w-5 bg-white text-[0.6rem] text-solo'
+              : 'h-7 w-7 bg-solo text-white sm:h-[30px] sm:w-[30px] sm:text-sm',
+          )}
+        >
           {user.avatarUrl ? (
             <img src={user.avatarUrl} alt="" className="h-full w-full object-cover" />
           ) : (
             user.initials
           )}
         </span>
-        <span className="hidden text-sm font-semibold sm:inline">{user.displayName}</span>
+        {isBar ? null : (
+          <span className="hidden text-sm font-semibold sm:inline">{user.displayName}</span>
+        )}
       </button>
 
       {open ? (
         <div
           role="menu"
-          className="absolute top-full right-0 z-[80] mt-2 w-[min(100vw-2rem,280px)] overflow-hidden rounded-lg border border-nuvem bg-white py-1 text-solo shadow-lg sm:w-auto sm:min-w-[240px]"
+          className={cn(
+            'absolute right-0 z-[80] w-[min(100vw-2rem,280px)] overflow-hidden rounded-lg border border-nuvem bg-white py-1 text-solo shadow-lg sm:w-auto sm:min-w-[240px]',
+            isBar ? 'bottom-full mb-2 max-h-[70vh] overflow-y-auto' : 'top-full mt-2',
+          )}
           onClick={(event) => event.stopPropagation()}
         >
           <div className="px-4 py-3">

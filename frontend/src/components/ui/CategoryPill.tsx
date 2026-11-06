@@ -23,10 +23,10 @@ export function CategoryPill({ card, onClick }: CategoryPillProps) {
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-bruma py-2 pr-2 pl-3 text-left transition-colors hover:bg-nuvem/70"
+      className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-nuvem bg-white py-2 pr-2 pl-3 text-left transition-colors hover:border-solo"
     >
-      <span className="font-display text-[13px] leading-none font-bold text-solo">{label}</span>
-      <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white shadow-sm">
+      <span className="font-display text-[1rem] leading-none font-bold text-solo">{label}</span>
+      <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-sm bg-bruma">
         <Icon className="h-3.5 w-3.5 text-solo" strokeWidth={1.75} />
       </span>
     </button>

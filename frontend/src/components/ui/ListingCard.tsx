@@ -24,13 +24,13 @@ export function ListingCard({
   return (
     <article
       className={cn(
-        'group w-full overflow-hidden rounded-lg border border-nuvem bg-white shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-hover',
+        'group w-full overflow-hidden rounded-lg border border-nuvem bg-white transition-colors duration-200 hover:border-solo',
         className,
       )}
     >
       <Link to={`/anuncio/${listing.id}`} className="block">
         <div
-          className="relative h-44 bg-cover bg-center"
+          className="relative aspect-[4/3] bg-cover bg-center"
           style={
             coverPhoto
               ? { backgroundImage: `url(${coverPhoto})` }
@@ -38,9 +38,9 @@ export function ListingCard({
           }
         >
           {listing.escrow ? (
-            <Badge variant="escrow" className="absolute top-3 left-3">
-              <Shield className="mr-1 inline h-3 w-3" />
-              Pagamento protegido
+            <Badge variant="escrow" className="absolute top-0 left-0">
+              <Shield className="mr-1.5 h-3 w-3 text-pull" />
+              Custódia
             </Badge>
           ) : null}
           {onToggleFavorite ? (
@@ -51,18 +51,18 @@ export function ListingCard({
                 event.preventDefault();
                 onToggleFavorite(listing.id);
               }}
-              className="absolute top-3 right-3 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-white/90 text-pull"
+              className="absolute top-2.5 right-2.5 flex h-9 w-9 cursor-pointer items-center justify-center rounded-sm bg-white text-solo hover:text-pull"
             >
               <Heart className={cn('h-4 w-4', favorited && 'fill-pull')} />
             </button>
           ) : null}
         </div>
-        <div className="p-4">
-          <div className="mb-1 font-mono text-lg font-bold text-pull">{listing.price}</div>
-          <h3 className="mb-2 line-clamp-2 font-display text-base font-bold leading-snug text-solo">
+        <div className="border-t border-nuvem p-4">
+          <div className="mb-1.5 font-mono text-[1.05rem] font-bold tracking-tight text-solo">{listing.price}</div>
+          <h3 className="mb-2 line-clamp-2 font-display text-[1.18rem] font-bold leading-[1.1] text-solo">
             {listing.title}
           </h3>
-          <p className="mb-3 font-mono text-xs tracking-wide text-cinza">{listing.specs}</p>
+          <p className="t2f-eyebrow mb-3 text-[0.62rem] text-cinza">{listing.specs}</p>
           <div className="flex items-center gap-1.5 text-sm text-cinza">
             <MapPin className="h-3.5 w-3.5" />
             {listing.location}

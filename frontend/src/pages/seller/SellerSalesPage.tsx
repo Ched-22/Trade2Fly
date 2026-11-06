@@ -241,7 +241,7 @@ export function SellerSalesPage() {
                           </div>
                         ) : null}
                       </div>
-                      <span className="rounded-full bg-liberado-light px-3 py-1 text-xs font-semibold text-liberado-dark">
+                      <span className="rounded-sm bg-liberado-light px-3 py-1 text-xs font-semibold text-liberado-dark">
                         {ORDER_STATUS_LABELS[order.status]}
                       </span>
                     </Link>

@@ -26,7 +26,7 @@ export function PaymentMethodCard({ method, onSetDefault, onRemove, busy }: Paym
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-semibold text-solo">{title}</span>
             {method.isDefault ? (
-              <span className="rounded-full bg-voo/10 px-2.5 py-0.5 text-xs font-semibold text-voo">
+              <span className="rounded-sm bg-voo/10 px-2.5 py-0.5 text-xs font-semibold text-voo">
                 Padrão
               </span>
             ) : null}

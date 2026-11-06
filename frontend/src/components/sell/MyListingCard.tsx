@@ -29,15 +29,15 @@ export function MyListingCard({ listing }: MyListingCardProps) {
         }
       >
         {isDisputed ? (
-          <span className="absolute left-2 top-2 rounded-full bg-error px-2.5 py-1 text-xs font-semibold text-white">
+          <span className="absolute left-2 top-2 rounded-sm bg-error px-2.5 py-1 text-xs font-semibold text-white">
             Em disputa
           </span>
         ) : isSaleInProgress ? (
-          <span className="absolute left-2 top-2 rounded-full bg-voo px-2.5 py-1 text-xs font-semibold text-white">
+          <span className="absolute left-2 top-2 rounded-sm bg-voo px-2.5 py-1 text-xs font-semibold text-white">
             Venda em andamento
           </span>
         ) : !isActive ? (
-          <span className="absolute left-2 top-2 rounded-full bg-solo/80 px-2.5 py-1 text-xs font-semibold text-white">
+          <span className="absolute left-2 top-2 rounded-sm bg-solo/80 px-2.5 py-1 text-xs font-semibold text-white">
             Encerrado
           </span>
         ) : null}

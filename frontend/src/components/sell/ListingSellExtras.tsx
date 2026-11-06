@@ -1,3 +1,4 @@
+import { PackageCheck } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '../ui/Button';
@@ -61,7 +62,7 @@ export function ListingSuccessView({
 
   return (
     <div className="t2f-page max-w-2xl text-center">
-      <div className="mb-4 text-5xl">🪂</div>
+      <div className="mb-4 flex justify-center"><PackageCheck className="h-14 w-14 text-pull" strokeWidth={1.25} /></div>
       <h1 className="mb-3 font-display text-3xl font-extrabold">Anúncio publicado!</h1>
       <p className="mb-2 text-cinza">
         <strong className="text-solo">{title}</strong> já está visível para a comunidade Trade2Fly.
