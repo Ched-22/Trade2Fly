@@ -60,10 +60,10 @@ export function ProfilePublicPreview({ open, onClose, profile, email }: ProfileP
           <p className="text-sm text-cinza">Membro Trade2Fly</p>
 
           {profile.city ? (
-            <p className="mt-3 text-sm text-solo">📍 {profile.city}</p>
+            <p className="mt-3 text-sm text-solo">{profile.city}</p>
           ) : null}
           {profile.dropzone ? (
-            <p className="mt-1 text-sm text-cinza">🪂 {profile.dropzone}</p>
+            <p className="mt-1 text-sm text-cinza">Dropzone: {profile.dropzone}</p>
           ) : null}
 
           {profile.bio ? (

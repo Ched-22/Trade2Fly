@@ -22,14 +22,14 @@ export function Input({
   return (
     <div className="flex w-full flex-col gap-1.5">
       {label ? (
-        <label htmlFor={inputId} className="text-sm font-semibold text-solo">
+        <label htmlFor={inputId} className="t2f-eyebrow text-solo">
           {label}
         </label>
       ) : null}
       <div
         className={cn(
           'flex h-11 items-center gap-2 rounded-md border bg-white px-3.5',
-          error ? 'border-error' : 'border-nuvem focus-within:ring-3 focus-within:ring-voo/30',
+          error ? 'border-error' : 'border-nuvem focus-within:border-solo focus-within:ring-1 focus-within:ring-solo',
         )}
       >
         {prefix}

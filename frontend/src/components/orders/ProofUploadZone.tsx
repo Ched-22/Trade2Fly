@@ -140,12 +140,12 @@ export function ProofUploadZone({
             </div>
           </div>
           {complete ? (
-            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-liberado/15 px-2.5 py-1 text-xs font-semibold text-liberado-dark">
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-sm bg-liberado/15 px-2.5 py-1 text-xs font-semibold text-liberado-dark">
               <CheckCircle2 className="h-3.5 w-3.5" />
               Enviado
             </span>
           ) : (
-            <span className="shrink-0 rounded-full bg-nuvem/80 px-2.5 py-1 text-xs font-medium text-cinza">
+            <span className="shrink-0 rounded-sm bg-nuvem/80 px-2.5 py-1 text-xs font-medium text-cinza">
               Pendente
             </span>
           )}

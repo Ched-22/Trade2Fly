@@ -326,10 +326,10 @@ export function MessagesPage() {
                         <div
                           className="max-w-[85%] px-3.5 py-2 text-sm leading-relaxed whitespace-pre-line sm:max-w-[75%] sm:px-4 sm:py-2.5"
                           style={{
-                            background: isMe ? '#FF512E' : '#fff',
-                            color: isMe ? '#fff' : '#0A1B2A',
-                            borderRadius: isMe ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
-                            border: isMe ? 'none' : '1px solid #E3ECF7',
+                            background: isMe ? '#0e1114' : '#fff',
+                            color: isMe ? '#fff' : '#0e1114',
+                            borderRadius: isMe ? '3px 3px 0 3px' : '3px 3px 3px 0',
+                            border: isMe ? 'none' : '1px solid #ddd8ce',
                           }}
                         >
                           {message.text}

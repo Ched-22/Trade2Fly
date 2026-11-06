@@ -97,7 +97,7 @@ export function SellerOrdersPage() {
                   <span className="font-mono text-sm text-pull">{formatPrice(order.amount)}</span>
                   <span className="ml-2 text-xs text-cinza">líquido {formatPrice(netPayout)}</span>
                 </div>
-                <span className="rounded-full bg-bruma px-3 py-1 text-xs font-semibold">
+                <span className="rounded-sm bg-bruma px-3 py-1 text-xs font-semibold">
                   {ORDER_STATUS_LABELS[order.status]}
                 </span>
               </div>

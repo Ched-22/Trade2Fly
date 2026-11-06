@@ -19,7 +19,7 @@ export function OrderDetailHeader({ order, viewer = 'buyer' }: OrderDetailHeader
     <header>
       <h1 className="font-display text-3xl font-extrabold text-solo">{order.listing.title}</h1>
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <span className="rounded-full bg-liberado-light px-3 py-1 text-xs font-semibold text-liberado-dark">
+        <span className="rounded-sm bg-liberado-light px-3 py-1 text-xs font-semibold text-liberado-dark">
           {ORDER_STATUS_LABELS[order.status]}
         </span>
         <span className="font-mono text-lg font-bold text-pull">{formatPrice(order.amount)}</span>

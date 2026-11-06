@@ -6,7 +6,7 @@ import { SellerPlatformFeeNotice } from './SellerPlatformFeeNotice';
 import type { ListingFormState } from '../../types/listingForm';
 import { Badge } from '../ui/Badge';
 
-const FALLBACK_GRAD = 'linear-gradient(150deg, #0D2B45, #2D7DD2 55%, #3a8ee0)';
+const FALLBACK_GRAD = 'linear-gradient(150deg, #0e1114, #1d242b 55%, #2b3640)';
 
 type ListingPreviewPanelProps = {
   form: ListingFormState;

@@ -1,3 +1,4 @@
+import { Package } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { formatPrice } from '../../lib/priceFormat';
 import { ORDER_STATUS_LABELS, type OrderListItem } from '../../lib/ordersApi';
@@ -22,7 +23,7 @@ export function OrderHistoryCard({ order, to, subtitle }: OrderHistoryCardProps)
             className="h-full w-full rounded-lg object-cover"
           />
         ) : (
-          '🪂'
+          <Package className="mx-auto h-6 w-6 text-cinza" strokeWidth={1.5} />
         )}
       </div>
       <div className="min-w-0 flex-1">
@@ -35,7 +36,7 @@ export function OrderHistoryCard({ order, to, subtitle }: OrderHistoryCardProps)
             : new Date(order.createdAt).toLocaleDateString('pt-BR')}
         </div>
       </div>
-      <span className="rounded-full bg-liberado-light px-3 py-1 text-xs font-semibold text-liberado-dark">
+      <span className="rounded-sm bg-liberado-light px-3 py-1 text-xs font-semibold text-liberado-dark">
         {ORDER_STATUS_LABELS[order.status]}
       </span>
     </Link>

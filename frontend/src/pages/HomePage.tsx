@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react';
+import { Bell, Lock, PackagePlus, Search, TrendingUp, type LucideIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AuthAlert } from '../components/auth/AuthAlert';
 import { HomeListingSection } from '../components/home/HomeListingSection';
 import { CategoryCard } from '../components/ui/CategoryCard';
 import { CategoryPill } from '../components/ui/CategoryPill';
 import { Button } from '../components/ui/Button';
+import { SectionTitle } from '../components/ui/SectionTitle';
 import {
   brands,
   categoryCards,
@@ -14,6 +16,14 @@ import {
 } from '../data/mockCategories';
 import { homeListingSections } from '../data/homeListingSections';
 import { useMarketplace } from '../hooks/useMarketplace';
+
+const sealIcons: Record<string, LucideIcon> = {
+  lock: Lock,
+  search: Search,
+  package: PackagePlus,
+  trending: TrendingUp,
+  bell: Bell,
+};
 
 export function HomePage() {
   const navigate = useNavigate();
@@ -61,53 +71,60 @@ export function HomePage() {
 
   return (
     <div>
-      <section className="relative min-h-[420px] overflow-hidden text-white sm:min-h-[480px]">
+      <section className="relative isolate overflow-hidden bg-solo text-white">
         <img
-          src="/images/parachute-hero.png"
+          src="/images/parachute-hero-2-bw.jpg"
           alt=""
           aria-hidden
-          className="absolute inset-0 h-full w-full object-cover object-[center_35%]"
+          className="absolute inset-0 -z-10 h-full w-full object-cover object-[74%_68%] max-sm:-translate-y-[6%] sm:object-[center_68%]"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-solo/92 via-solo/75 to-solo/35" />
-        <div className="absolute inset-0 bg-[radial-gradient(900px_400px_at_80%_-10%,rgba(255,255,255,0.12),transparent)]" />
-        <div className="relative mx-auto flex max-w-3xl flex-col items-start gap-4 px-4 py-12 sm:gap-6 sm:px-6 sm:py-[72px] sm:pb-[84px]">
-          <span className="inline-flex items-center gap-2 rounded-full border border-liberado/40 bg-liberado/18 px-3 py-1.5 text-xs font-semibold text-[#7EF0CC] sm:px-3.5">
-            🔒 Pagamento protegido em custódia
-          </span>
-          <h1 className="font-display text-3xl leading-[1.08] font-black tracking-tight text-balance sm:text-4xl lg:text-5xl lg:leading-[1.05]">
-            O marketplace mais seguro de equipamentos de paraquedismo do Brasil
+        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-solo/90 via-solo/55 to-solo/10" />
+        <div className="absolute inset-x-0 bottom-0 -z-10 h-72 bg-gradient-to-t from-solo/90 to-transparent" />
+
+        <div className="mx-auto flex min-h-[460px] max-w-7xl flex-col justify-end px-4 pt-16 pb-10 sm:min-h-[560px] sm:px-6 sm:pb-14">
+          <div className="t2f-eyebrow mb-5 flex items-center gap-3 text-white/80">
+            <span className="inline-block h-[2px] w-10 bg-pull" aria-hidden />
+            Pagamento retido em custódia
+          </div>
+          <h1 className="max-w-4xl font-display text-[3.4rem] leading-[0.92] font-extrabold text-balance sm:text-[4.5rem] lg:text-[5.25rem]">
+            Equipamento de <span className="text-pull">alto nível</span>.
+            <br />
+            Negócio sem risco.
           </h1>
-          <p className="max-w-xl text-base leading-normal text-white/86 sm:text-lg">
-            Compre e venda velames, containers e reservas com pagamento retido em custódia. O valor só é liberado quando você confirma o recebimento.
+          <p className="mt-6 max-w-xl text-base leading-relaxed text-white/75 sm:text-lg">
+            Velames, containers e reservas de quem salta. O valor fica retido e só é liberado ao vendedor quando você confirma o recebimento.
           </p>
-          <div className="mt-1.5 flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-3.5">
+          <div className="mt-8 flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
             <Button size="lg" className="w-full sm:w-auto" onClick={() => navigate('/busca')}>
-              COMPRAR AGORA
+              Ver equipamentos
             </Button>
             <Button
               size="lg"
               variant="outline"
-              className="w-full border-white/50 bg-white/10 text-white hover:-translate-y-px hover:border-white hover:bg-white/25 hover:text-white sm:w-auto"
+              className="w-full border-white text-white hover:bg-white hover:text-solo sm:w-auto"
               onClick={() => navigate('/vender')}
             >
-              Vender meu equipamento
+              Vender o meu
             </Button>
           </div>
         </div>
-      </section>
 
-      <section className="border-b border-nuvem bg-white">
-        <div className="mx-auto grid max-w-7xl grid-cols-2 gap-3 px-4 py-5 sm:grid-cols-[repeat(auto-fit,minmax(170px,1fr))] sm:gap-4 sm:px-6 sm:py-7">
-          {homeSeals.map((seal) => (
-            <div key={seal.title} className="flex items-center gap-3">
-              <span className="text-2xl">{seal.icon}</span>
-              <div>
-                <div className="text-sm font-bold text-solo">{seal.title}</div>
-                <div className="text-xs text-cinza">{seal.sub}</div>
+      <div className="border-t border-white/15">
+        <div className="mx-auto grid max-w-7xl grid-cols-2 gap-px sm:grid-cols-[repeat(auto-fit,minmax(170px,1fr))]">
+          {homeSeals.map((seal) => {
+            const Icon = sealIcons[seal.icon];
+            return (
+              <div key={seal.title} className="flex items-center gap-3 border-white/15 px-4 not-first:border-l py-5 sm:px-6 sm:py-6">
+                <Icon className="h-5 w-5 shrink-0 text-pull" strokeWidth={1.5} />
+                <div>
+                  <div className="font-display text-[1.05rem] leading-none font-bold">{seal.title}</div>
+                  <div className="t2f-eyebrow mt-1.5 text-[0.58rem] text-white/50">{seal.sub}</div>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
+      </div>
       </section>
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
@@ -132,22 +149,21 @@ export function HomePage() {
           <p className="pt-6 text-center text-cinza">Nenhum anúncio disponível no momento.</p>
         ) : null}
 
-        <section className="py-6 sm:py-10">
-          <div className="mb-3 flex items-center justify-between gap-3 sm:mb-5">
-            <h2 className="font-display text-base font-extrabold tracking-tight text-solo uppercase italic sm:text-2xl sm:normal-case sm:not-italic md:text-3xl">
-              Categorias populares
-            </h2>
-            <button
-              type="button"
-              onClick={() => navigate('/busca')}
-              className="hidden cursor-pointer rounded-lg border border-solo bg-white px-3 py-1.5 text-xs font-semibold text-solo hover:bg-bruma sm:inline-flex"
-            >
-              Ver todas
-            </button>
-          </div>
-          <p className="mb-3 hidden text-cinza sm:mb-5 sm:block">
-            Encontre exatamente o que precisa para o seu rig.
-          </p>
+        <section className="py-10 sm:py-16">
+          <SectionTitle
+            eyebrow="01 — Categorias"
+            title="Monte o seu rig"
+            subtitle="Encontre exatamente o que precisa para o seu rig."
+            action={
+              <button
+                type="button"
+                onClick={() => navigate('/busca')}
+                className="t2f-eyebrow hidden shrink-0 cursor-pointer border-b border-solo pb-0.5 text-solo transition-colors hover:border-pull hover:text-pull sm:inline-block"
+              >
+                Ver todas →
+              </button>
+            }
+          />
 
           <div className="flex flex-wrap gap-2 md:hidden">
             {categoryCards.map((card) => (
@@ -180,40 +196,41 @@ export function HomePage() {
           />
         ))}
 
-        <section className="py-8 sm:py-12">
-          <div className="grid items-center gap-6 rounded-2xl bg-gradient-to-br from-altitude to-[#16456e] p-6 text-white sm:gap-10 sm:rounded-3xl sm:p-12 md:grid-cols-2">
+        <section className="py-10 sm:py-16">
+          <div className="t2f-grain grid items-center gap-8 bg-solo p-6 text-white sm:gap-14 sm:p-14 md:grid-cols-2">
             <div>
-              <span className="mb-3 inline-flex items-center gap-2 rounded-full bg-liberado/18 px-3 py-1 text-xs font-semibold text-[#7EF0CC] sm:mb-4">
-                🛡️ Proteção ao comprador
-              </span>
-              <h2 className="mb-3 font-display text-2xl leading-tight font-extrabold tracking-tight sm:mb-3.5 sm:text-4xl">
-                Seu dinheiro fica seguro até você confirmar
+              <div className="t2f-eyebrow mb-5 flex items-center gap-2 text-pull">
+                <span className="inline-block h-[7px] w-[7px] bg-pull" aria-hidden />
+                02 — Proteção ao comprador
+              </div>
+              <h2 className="mb-4 font-display text-[2.6rem] leading-[0.95] font-bold sm:text-[4rem]">
+                Seu dinheiro fica parado até você confirmar
               </h2>
-              <p className="mb-6 leading-relaxed text-white/80">
+              <p className="mb-8 max-w-md leading-relaxed text-white/65">
                 Todo pagamento passa pela custódia da Trade2Fly. O vendedor só recebe quando você confirma que está tudo certo com o equipamento.
               </p>
-              <Button onClick={() => navigate('/faq#escrow')}>Saiba mais</Button>
+              <Button onClick={() => navigate('/faq#escrow')}>Como funciona</Button>
             </div>
-            <div className="flex flex-col gap-3.5">
-              {protectionItems.map((item) => (
-                <div key={item} className="flex items-center gap-3 rounded-[10px] border border-white/10 bg-white/6 px-4 py-3.5">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-liberado text-sm font-bold text-white">✓</span>
-                  <span className="text-sm">{item}</span>
-                </div>
+            <ol className="flex flex-col border-t border-white/15">
+              {protectionItems.map((item, index) => (
+                <li key={item} className="flex items-baseline gap-5 border-b border-white/15 py-4">
+                  <span className="font-mono text-xs text-pull">{String(index + 1).padStart(2, '0')}</span>
+                  <span className="font-display text-[1.3rem] leading-tight font-semibold">{item}</span>
+                </li>
               ))}
-            </div>
+            </ol>
           </div>
         </section>
 
-        <section className="py-12">
-          <h2 className="mb-4 font-display text-2xl font-extrabold tracking-tight">Marcas em destaque</h2>
-          <div className="flex flex-wrap gap-3">
+        <section className="py-10 sm:py-16">
+          <SectionTitle eyebrow="03 — Marcas" title="Marcas em destaque" />
+          <div className="grid grid-cols-2 gap-px border border-nuvem bg-nuvem sm:grid-cols-3 lg:grid-cols-6">
             {brands.map((brand) => (
               <button
                 key={brand}
                 type="button"
                 onClick={() => navigate(`/busca?brand=${encodeURIComponent(brand)}`)}
-                className="cursor-pointer rounded-full border border-nuvem bg-white px-5 py-2.5 font-display text-[0.95rem] font-bold text-altitude shadow-sm"
+                className="cursor-pointer bg-white px-5 py-7 font-display text-[1.8rem] font-bold text-solo transition-colors hover:bg-solo hover:text-white"
               >
                 {brand}
               </button>
@@ -221,39 +238,36 @@ export function HomePage() {
           </div>
         </section>
 
-        <section className="py-12">
-          <h2 className="mb-6 font-display text-3xl font-extrabold tracking-tight">O que a comunidade diz</h2>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-[repeat(auto-fill,minmax(280px,1fr))] sm:gap-4">
+        <section className="py-10 sm:py-16">
+          <SectionTitle eyebrow="04 — Comunidade" title="O que a comunidade diz" />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-[repeat(auto-fill,minmax(280px,1fr))]">
             {reviews.map((review) => (
-              <div key={review.name} className="rounded-lg border border-nuvem bg-white p-5 shadow-sm">
-                <div className="mb-2.5 tracking-[2px] text-pull">{review.stars}</div>
-                <p className="mb-4 text-[0.95rem] leading-relaxed text-solo">{review.text}</p>
-                <div className="flex items-center gap-2.5">
-                  <span
-                    className="flex h-[34px] w-[34px] items-center justify-center rounded-full text-sm font-bold text-white"
-                    style={{ background: review.color }}
-                  >
+              <figure key={review.name} className="border border-nuvem border-t-solo bg-white p-6">
+                <div className="mb-3 text-sm tracking-[3px] text-pull">{review.stars}</div>
+                <blockquote className="mb-6 text-[0.95rem] leading-relaxed text-solo">{review.text}</blockquote>
+                <figcaption className="flex items-center gap-3 border-t border-nuvem pt-4">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-solo font-mono text-xs font-bold text-white">
                     {review.initials}
                   </span>
                   <div>
-                    <div className="text-sm font-bold">{review.name}</div>
-                    <div className="text-xs text-cinza">{review.role}</div>
+                    <div className="font-display text-[1.05rem] leading-none font-bold">{review.name}</div>
+                    <div className="t2f-eyebrow mt-1 text-[0.58rem] text-cinza">{review.role}</div>
                   </div>
-                </div>
-              </div>
+                </figcaption>
+              </figure>
             ))}
           </div>
         </section>
 
         <section className="pb-12 sm:pb-16">
-          <div className="flex flex-col items-stretch justify-between gap-6 rounded-2xl border border-nuvem bg-white p-6 shadow-md sm:flex-row sm:flex-wrap sm:items-center sm:p-10">
+          <div className="flex flex-col items-stretch justify-between gap-6 border border-solo bg-white p-6 sm:flex-row sm:flex-wrap sm:items-center sm:p-10">
             <div className="max-w-md">
-              <h2 className="font-display text-xl font-extrabold tracking-tight sm:text-2xl">Receba novos anúncios no seu e-mail</h2>
-              <p className="text-cinza">Alertas de equipamento e novidades da comunidade.</p>
+              <h2 className="font-display text-[1.9rem] leading-none font-bold sm:text-[2.3rem]">Receba novos anúncios no seu e-mail</h2>
+              <p className="mt-2 text-cinza">Alertas de equipamento e novidades da comunidade.</p>
             </div>
             {subscribed ? (
               <div className="flex items-center gap-2.5 text-sm font-semibold text-liberado-dark sm:text-base">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-liberado text-white">✓</span>
+                <span className="flex h-6 w-6 items-center justify-center rounded-sm bg-liberado text-white">✓</span>
                 Inscrição confirmada. Você começa a receber novidades em breve.
               </div>
             ) : (
@@ -266,7 +280,7 @@ export function HomePage() {
                       setEmailError('');
                     }}
                     placeholder="seu@email.com"
-                    className="h-11 w-full flex-1 rounded-md border-[1.5px] border-nuvem px-3.5 font-sans text-[0.95rem] outline-none focus:ring-3 focus:ring-voo/30 sm:h-[46px]"
+                    className="h-11 w-full flex-1 rounded-md border border-solo/30 bg-bruma px-3.5 font-sans text-[0.95rem] outline-none focus:border-solo focus:bg-white sm:h-[46px]"
                   />
                   <Button className="w-full shrink-0 sm:w-auto" onClick={subscribe}>Inscrever</Button>
                 </div>

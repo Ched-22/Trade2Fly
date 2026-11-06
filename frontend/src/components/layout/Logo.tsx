@@ -2,38 +2,17 @@ type LogoProps = {
   variant?: 'light' | 'dark';
 };
 
+/** Marca tipográfica: só o nome. Condensado, itálico de velocidade, o "2" em laranja. */
 export function Logo({ variant = 'dark' }: LogoProps) {
-  const isDark = variant === 'dark';
+  const ink = variant === 'dark' ? '#0e1114' : '#f4f1eb';
 
   return (
-    <div className="flex items-center gap-1.5 sm:gap-2">
-      <svg
-        className="h-7 w-7 sm:h-[30px] sm:w-[30px]"
-        viewBox="0 0 48 48"
-        fill="none"
-        aria-hidden
-      >
-        <path
-          d="M4 18a20 20 0 0 1 40 0"
-          stroke="#FF512E"
-          strokeWidth="3.5"
-          strokeLinecap="round"
-        />
-        <path
-          d="M4 18l8 8M24 18v8M44 18l-8 8M24 26l-7 9h14l-7-9z"
-          stroke={isDark ? '#0a1b2a' : '#fff'}
-          strokeWidth="2.4"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-      <span
-        className={`font-display text-lg font-black tracking-tight sm:text-[1.3rem] ${
-          isDark ? 'text-solo' : 'text-white'
-        }`}
-      >
-        Trade<span className={isDark ? 'text-pull' : 'text-pull'}>2</span>Fly
-      </span>
-    </div>
+    <span
+      aria-label="Trade2Fly"
+      className="inline-block -skew-x-[9deg] font-display text-[1.7rem] leading-none font-extrabold tracking-[0.015em] sm:text-[2rem]"
+      style={{ color: ink }}
+    >
+      Trade<span className="text-pull">2</span>Fly
+    </span>
   );
 }

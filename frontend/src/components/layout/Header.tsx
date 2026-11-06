@@ -21,7 +21,7 @@ export function Header() {
   };
 
   const searchBar = (
-    <div className="flex h-10 w-full items-center gap-2.5 rounded-xl border border-nuvem bg-bruma px-3 sm:h-11 sm:px-4 md:max-w-[560px]">
+    <div className="flex h-10 w-full items-center gap-2.5 rounded-md border border-solo/25 bg-bruma px-3 transition-colors focus-within:border-solo focus-within:bg-white sm:h-11 sm:px-4 md:max-w-[560px]">
       <Search className="h-4 w-4 shrink-0 text-solo sm:h-[18px] sm:w-[18px]" strokeWidth={2} />
       <input
         value={query}
@@ -36,7 +36,7 @@ export function Header() {
   );
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-nuvem bg-white">
+    <header className="sticky top-0 z-50 w-full bg-white">
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-6">
         <div className="flex h-14 min-w-0 items-center gap-2 sm:h-[68px] sm:gap-4">
           <Link to="/" className="flex shrink-0 items-center">
@@ -48,7 +48,7 @@ export function Header() {
           <div className="ml-auto flex min-w-0 shrink items-center gap-1 sm:gap-2.5">
             <LanguageSwitcher />
             {loggedIn && user ? (
-              <>
+              <div className="hidden items-center gap-1 sm:gap-2.5 md:flex">
                 <button
                   type="button"
                   aria-label="Favoritos"
@@ -89,12 +89,12 @@ export function Header() {
                   ) : null}
                 </button>
                 <UserMenu user={user} onLogout={logout} />
-              </>
+              </div>
             ) : (
               <button
                 type="button"
                 onClick={() => navigate('/entrar')}
-                className="inline-flex h-9 cursor-pointer items-center rounded-lg border border-solo bg-white px-3 text-sm font-semibold text-solo transition-colors hover:bg-bruma sm:h-10 sm:px-5"
+                className="inline-flex h-9 cursor-pointer items-center rounded-md border border-solo bg-transparent px-3 text-xs font-semibold tracking-[0.09em] text-solo uppercase transition-colors hover:bg-solo hover:text-white sm:h-10 sm:px-5"
               >
                 Entrar
               </button>
@@ -103,7 +103,7 @@ export function Header() {
             <button
               type="button"
               onClick={() => navigate('/vender')}
-              className="inline-flex h-9 shrink-0 cursor-pointer items-center justify-center rounded-lg bg-solo px-3 text-sm font-semibold text-white transition-colors hover:bg-solo/90 sm:h-10 sm:px-5"
+              className="inline-flex h-9 shrink-0 cursor-pointer items-center justify-center rounded-md bg-pull px-3 text-xs font-semibold tracking-[0.09em] text-white uppercase transition-colors hover:bg-solo sm:h-10 sm:px-5"
             >
               Vender
             </button>
@@ -112,16 +112,17 @@ export function Header() {
 
         <div className="min-w-0 pb-3 md:hidden">{searchBar}</div>
       </div>
+      <div className="h-px w-full bg-solo" aria-hidden />
 
-      <nav className="w-full border-t border-nuvem" aria-label="Categorias">
+      <nav className="w-full bg-solo" aria-label="Categorias">
         <div className="mx-auto w-full min-w-0 max-w-7xl px-4 sm:px-6">
-          <div className="t2f-scroll flex w-full min-w-0 items-center gap-0.5 overflow-x-auto py-2 sm:gap-1">
+          <div className="t2f-scroll flex w-full min-w-0 items-center gap-0.5 overflow-x-auto py-0 sm:gap-1">
             {categories.map((category) => (
               <button
                 key={category}
                 type="button"
                 onClick={() => navigate(`/busca?category=${encodeURIComponent(category)}`)}
-                className="shrink-0 cursor-pointer rounded-md border-none bg-transparent px-2.5 py-1.5 font-sans text-xs font-medium whitespace-nowrap text-solo/80 hover:bg-bruma hover:text-solo sm:px-3 sm:text-sm"
+                className="shrink-0 cursor-pointer border-none bg-transparent px-2.5 py-3 font-sans text-[0.68rem] font-semibold tracking-[0.12em] whitespace-nowrap text-white/70 uppercase transition-colors hover:text-pull sm:px-3.5"
               >
                 {category}
               </button>
@@ -130,7 +131,7 @@ export function Header() {
             <button
               type="button"
               onClick={() => navigate('/busca')}
-              className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-md border-none bg-transparent px-2.5 py-1.5 font-sans text-xs font-medium whitespace-nowrap text-solo hover:bg-bruma sm:px-3 sm:text-sm"
+              className="ml-auto flex shrink-0 cursor-pointer items-center gap-1.5 border-none bg-transparent px-2.5 py-3 font-sans text-[0.68rem] font-semibold tracking-[0.12em] whitespace-nowrap text-white uppercase transition-colors hover:text-pull sm:px-3.5"
             >
               <Menu className="h-4 w-4" strokeWidth={1.75} />
               Todas as categorias
